@@ -1,0 +1,166 @@
+Iteration 0009 — ecf63fa05a3a (accepted)
+========================================
+
+
+Change summary
+--------------
+
+
+Accumulate TIP4P i-water hydrogen force-partition contributions once per outer-i and reuse cached i-side coordinates for virial math in pair_lj_cut_tip4p_long::eval() to reduce hot-loop writes/loads.
+
+Acceptance rationale
+--------------------
+
+
+Primary metric improved from 0.278954479261 to 0.271962072991 (+2.5066% vs incumbent) with correctness/guardrails passing and no hard reject, clearing the +2.0% threshold.
+
+Guardrails & metrics
+--------------------
+
+
++------------------+---------------------------------------+
+| field            | value                                 |
++==================+=======================================+
+| decision         | ACCEPTED                              |
++------------------+---------------------------------------+
+| correctness      | ok                                    |
++------------------+---------------------------------------+
+| correctness mode | field_tolerances                      |
++------------------+---------------------------------------+
+| hard reject      | no                                    |
++------------------+---------------------------------------+
+| guardrail errors | 0                                     |
++------------------+---------------------------------------+
+| incumbent commit | 9879326ddc5b                          |
++------------------+---------------------------------------+
+| candidate commit | ecf63fa05a3a                          |
++------------------+---------------------------------------+
+| incumbent metric | 0.278954                              |
++------------------+---------------------------------------+
+| candidate metric | 0.271962                              |
++------------------+---------------------------------------+
+| baseline metric  | 0.34835                               |
++------------------+---------------------------------------+
+| Δ vs incumbent   | +2.507% (lower-is-better sign)        |
++------------------+---------------------------------------+
+| changed files    | src/KSPACE/pair_lj_cut_tip4p_long.cpp |
++------------------+---------------------------------------+
+
+
+Diffstat
+--------
+
+
+.. code-block:: text
+
+    src/KSPACE/pair_lj_cut_tip4p_long.cpp | 59 ++++++++++++++++++++++-------------
+    1 file changed, 38 insertions(+), 21 deletions(-)
+
+Diff
+----
+
+
+:download:`download full diff <_diffs/iter_0009_ecf63fa05a3a.diff>`
+
+.. code-block:: diff
+
+   diff --git a/src/KSPACE/pair_lj_cut_tip4p_long.cpp b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   index 5579114cfc..34aa06f95c 100644
+   --- a/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   +++ b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   @@ -177,6 +177,9 @@ void PairLJCutTIP4PLong::eval()
+      const double alpha_H = 0.5 * alpha;
+    
+      double fxtmp,fytmp,fztmp;
+   +  double fiHxtmp,fiHytmp,fiHztmp;
+   +  double xiH1x = 0.0, xiH1y = 0.0, xiH1z = 0.0;
+   +  double xiH2x = 0.0, xiH2y = 0.0, xiH2z = 0.0;
+    
+      inum = list->inum;
+      ilist = list->ilist;
+   @@ -209,6 +212,17 @@ void PairLJCutTIP4PLong::eval()
+          iH1 = hneigh2d[i][0];
+          iH2 = hneigh2d[i][1];
+          x1 = newsite2d[i];
+   +      fiHxtmp = fiHytmp = fiHztmp = 0.0;
+   +      if (VFLAG) {
+   +        const double * const xiH1 = x[iH1];
+   +        const double * const xiH2 = x[iH2];
+   +        xiH1x = xiH1[0];
+   +        xiH1y = xiH1[1];
+   +        xiH1z = xiH1[2];
+   +        xiH2x = xiH2[0];
+   +        xiH2y = xiH2[1];
+   +        xiH2z = xiH2[2];
+   +      }
+        } else x1 = x[i];
+    
+        jlist = firstneigh[i];
+   @@ -340,12 +354,12 @@ void PairLJCutTIP4PLong::eval()
+                fztmp += delz * cforce;
+    
+                if (VFLAG) {
+   -              v[0] = x[i][0] * delx * cforce;
+   -              v[1] = x[i][1] * dely * cforce;
+   -              v[2] = x[i][2] * delz * cforce;
+   -              v[3] = x[i][0] * dely * cforce;
+   -              v[4] = x[i][0] * delz * cforce;
+   -              v[5] = x[i][1] * delz * cforce;
+   +              v[0] = xtmp * delx * cforce;
+   +              v[1] = ytmp * dely * cforce;
+   +              v[2] = ztmp * delz * cforce;
+   +              v[3] = xtmp * dely * cforce;
+   +              v[4] = xtmp * delz * cforce;
+   +              v[5] = ytmp * delz * cforce;
+                }
+                if (EVFLAG) vlist[n++] = i;
+    
+   @@ -368,23 +382,17 @@ void PairLJCutTIP4PLong::eval()
+                fytmp += fOy;
+                fztmp += fOz;
+    
+   -            f[iH1][0] += fHx;
+   -            f[iH1][1] += fHy;
+   -            f[iH1][2] += fHz;
+   -
+   -            f[iH2][0] += fHx;
+   -            f[iH2][1] += fHy;
+   -            f[iH2][2] += fHz;
+   +            fiHxtmp += fHx;
+   +            fiHytmp += fHy;
+   +            fiHztmp += fHz;
+    
+                if (VFLAG) {
+   -              xH1 = x[iH1];
+   -              xH2 = x[iH2];
+   -              v[0] = x[i][0]*fOx + xH1[0]*fHx + xH2[0]*fHx;
+   -              v[1] = x[i][1]*fOy + xH1[1]*fHy + xH2[1]*fHy;
+   -              v[2] = x[i][2]*fOz + xH1[2]*fHz + xH2[2]*fHz;
+   -              v[3] = x[i][0]*fOy + xH1[0]*fHy + xH2[0]*fHy;
+   -              v[4] = x[i][0]*fOz + xH1[0]*fHz + xH2[0]*fHz;
+   -              v[5] = x[i][1]*fOz + xH1[1]*fHz + xH2[1]*fHz;
+   +              v[0] = xtmp*fOx + xiH1x*fHx + xiH2x*fHx;
+   +              v[1] = ytmp*fOy + xiH1y*fHy + xiH2y*fHy;
+   +              v[2] = ztmp*fOz + xiH1z*fHz + xiH2z*fHz;
+   +              v[3] = xtmp*fOy + xiH1x*fHy + xiH2x*fHy;
+   +              v[4] = xtmp*fOz + xiH1x*fHz + xiH2x*fHz;
+   +              v[5] = ytmp*fOz + xiH1y*fHz + xiH2y*fHz;
+                }
+                if (EVFLAG) {
+                  vlist[n++] = i;
+   @@ -466,6 +474,15 @@ void PairLJCutTIP4PLong::eval()
+          }
+        }
+    
+   +    if (i_is_O) {
+   +      f[iH1][0] += fiHxtmp;
+   +      f[iH1][1] += fiHytmp;
+   +      f[iH1][2] += fiHztmp;
+   +      f[iH2][0] += fiHxtmp;
+   +      f[iH2][1] += fiHytmp;
+   +      f[iH2][2] += fiHztmp;
+   +    }
+   +
+        f[i][0] += fxtmp;
+        f[i][1] += fytmp;
+        f[i][2] += fztmp;

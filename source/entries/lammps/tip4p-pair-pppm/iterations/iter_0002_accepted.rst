@@ -1,0 +1,524 @@
+Iteration 0002 — 2687c05eb308 (accepted)
+========================================
+
+
+Change summary
+--------------
+
+
+Ported OPT-style specialized inner-loop compute (`eval<...>` dispatch) into default `pair_lj_cut_tip4p_long` and replaced per-step `hneigh[][2]` clearing with a toggled stamp to cut force-kernel memory/branch overhead.
+
+Acceptance rationale
+--------------------
+
+
+Candidate 2687c05eb308 improves weighted_median_wall_seconds_per_100_steps by 11.59% vs incumbent with correctness/guardrails passing, exceeding the +2.0% contract threshold.
+
+Guardrails & metrics
+--------------------
+
+
++------------------+----------------------------------------------------------------------------+
+| field            | value                                                                      |
++==================+============================================================================+
+| decision         | ACCEPTED                                                                   |
++------------------+----------------------------------------------------------------------------+
+| correctness      | ok                                                                         |
++------------------+----------------------------------------------------------------------------+
+| correctness mode | field_tolerances                                                           |
++------------------+----------------------------------------------------------------------------+
+| hard reject      | no                                                                         |
++------------------+----------------------------------------------------------------------------+
+| guardrail errors | 0                                                                          |
++------------------+----------------------------------------------------------------------------+
+| incumbent commit | e7c0ed95a333                                                               |
++------------------+----------------------------------------------------------------------------+
+| candidate commit | 2687c05eb308                                                               |
++------------------+----------------------------------------------------------------------------+
+| incumbent metric | 0.34835                                                                    |
++------------------+----------------------------------------------------------------------------+
+| candidate metric | 0.30797                                                                    |
++------------------+----------------------------------------------------------------------------+
+| baseline metric  | 0.34835                                                                    |
++------------------+----------------------------------------------------------------------------+
+| Δ vs incumbent   | +11.592% (lower-is-better sign)                                            |
++------------------+----------------------------------------------------------------------------+
+| changed files    | src/KSPACE/pair_lj_cut_tip4p_long.cpp, src/KSPACE/pair_lj_cut_tip4p_long.h |
++------------------+----------------------------------------------------------------------------+
+
+
+Diffstat
+--------
+
+
+.. code-block:: text
+
+    src/KSPACE/pair_lj_cut_tip4p_long.cpp | 278 ++++++++++++++++++++--------------
+    src/KSPACE/pair_lj_cut_tip4p_long.h   |   7 +-
+    2 files changed, 167 insertions(+), 118 deletions(-)
+
+Diff
+----
+
+
+:download:`download full diff <_diffs/iter_0002_2687c05eb308.diff>`
+
+.. code-block:: diff
+
+   diff --git a/src/KSPACE/pair_lj_cut_tip4p_long.cpp b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   index d9f8daf751..340b13aab9 100644
+   --- a/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   +++ b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   @@ -51,6 +51,7 @@ PairLJCutTIP4PLong::PairLJCutTIP4PLong(LAMMPS *lmp) :
+    
+      nmax = 0;
+      hneigh = nullptr;
+   +  hneigh_stamp = 0;
+      newsite = nullptr;
+    
+      // TIP4P cannot compute virial as F dot r
+   @@ -71,28 +72,14 @@ PairLJCutTIP4PLong::~PairLJCutTIP4PLong()
+    
+    void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+    {
+   -  int i,j,ii,jj,inum,jnum,itype,jtype,itable,key;
+   -  int n,vlist[6];
+   -  int iH1,iH2,jH1,jH2;
+   -  double qtmp,xtmp,ytmp,ztmp,delx,dely,delz,evdwl,ecoul;
+   -  double fraction,table;
+   -  double r,r2inv,r6inv,forcecoul,forcelj,cforce;
+   -  double factor_coul,factor_lj;
+   -  double grij,expm2,prefactor,t,erfc;
+   -  double fO[3],fH[3],fd[3],v[6];
+   -  double *x1,*x2,*xH1,*xH2;
+   -  int *ilist,*jlist,*numneigh,**firstneigh;
+   -  double rsq;
+   -
+   -  evdwl = ecoul = 0.0;
+      ev_init(eflag,vflag);
+    
+   +  const int nlocal = atom->nlocal;
+   +  const int nall = nlocal + atom->nghost;
+   +
+      // reallocate hneigh & newsite if necessary
+      // initialize hneigh[0] to -1 on steps when reneighboring occurred
+   -  // initialize hneigh[2] to 0 every step
+   -
+   -  int nlocal = atom->nlocal;
+   -  int nall = nlocal + atom->nghost;
+   +  // use toggled step stamp in hneigh[2] to avoid per-step full-array clears
+    
+      if (atom->nmax > nmax) {
+        nmax = atom->nmax;
+   @@ -100,21 +87,70 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+        memory->create(hneigh,nmax,3,"pair:hneigh");
+        memory->destroy(newsite);
+        memory->create(newsite,nmax,3,"pair:newsite");
+   +    for (int i = 0; i < nmax; i++) {
+   +      hneigh[i][0] = -1;
+   +      hneigh[i][2] = -1;
+   +    }
+      }
+   +
+      if (neighbor->ago == 0)
+   -    for (i = 0; i < nall; i++) hneigh[i][0] = -1;
+   -  for (i = 0; i < nall; i++) hneigh[i][2] = 0;
+   -
+   -  double **f = atom->f;
+   -  double **x = atom->x;
+   -  double *q = atom->q;
+   -  tagint *tag = atom->tag;
+   -  int *type = atom->type;
+   -  double *special_coul = force->special_coul;
+   -  double *special_lj = force->special_lj;
+   -  int newton_pair = force->newton_pair;
+   -  double qqrd2e = force->qqrd2e;
+   -  double cut_coulsqplus = (cut_coul+2.0*qdist) * (cut_coul+2.0*qdist);
+   +    for (int i = 0; i < nall; i++) hneigh[i][0] = -1;
+   +  hneigh_stamp = 1 - hneigh_stamp;
+   +
+   +  if (!ncoultablebits) {
+   +    if (evflag) {
+   +      if (eflag) {
+   +        if (vflag) return eval<1,1,1,1>();
+   +        else return eval<1,1,1,0>();
+   +      } else {
+   +        if (vflag) return eval<1,1,0,1>();
+   +        else return eval<1,1,0,0>();
+   +      }
+   +    } else return eval<1,0,0,0>();
+   +  } else {
+   +    if (evflag) {
+   +      if (eflag) {
+   +        if (vflag) return eval<0,1,1,1>();
+   +        else return eval<0,1,1,0>();
+   +      } else {
+   +        if (vflag) return eval<0,1,0,1>();
+   +        else return eval<0,1,0,0>();
+   +      }
+   +    } else return eval<0,0,0,0>();
+   +  }
+   +}
+   +
+   +/* ---------------------------------------------------------------------- */
+   +
+   +template <const int CTABLE, const int EVFLAG, const int EFLAG, const int VFLAG>
+   +void PairLJCutTIP4PLong::eval()
+   +{
+   +  double qtmp,xtmp,ytmp,ztmp,delx,dely,delz,evdwl,ecoul;
+   +  double fraction,table;
+   +  double r,rsq,r2inv,r6inv,forcecoul,forcelj,cforce;
+   +  double factor_coul,factor_lj;
+   +  double grij,expm2,prefactor,t,erfc;
+   +  double v[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+   +  double fdx,fdy,fdz,fOx,fOy,fOz,fHx,fHy,fHz;
+   +  const double *x1,*x2,*xH1,*xH2;
+   +
+   +  int *ilist,*jlist,*numneigh,**firstneigh;
+   +  int i,j,ii,jj,inum,jnum,itype,jtype,itable,key;
+   +  int n,vlist[6];
+   +  int iH1,iH2,jH1,jH2;
+   +
+   +  const double * const * const x = atom->x;
+   +  double * const * const f = atom->f;
+   +  const double * const q = atom->q;
+   +  const tagint * const tag = atom->tag;
+   +  const int * const type = atom->type;
+   +  const int nlocal = atom->nlocal;
+   +  const double * const special_coul = force->special_coul;
+   +  const double * const special_lj = force->special_lj;
+   +  const double qqrd2e = force->qqrd2e;
+   +  const double cut_coulsqplus = (cut_coul+2.0*qdist) * (cut_coul+2.0*qdist);
+   +
+   +  double fxtmp,fytmp,fztmp;
+    
+      inum = list->inum;
+      ilist = list->ilist;
+   @@ -148,14 +184,14 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+            compute_newsite(x[i],x[iH1],x[iH2],newsite[i]);
+            hneigh[i][0] = iH1;
+            hneigh[i][1] = iH2;
+   -        hneigh[i][2] = 1;
+   +        hneigh[i][2] = hneigh_stamp;
+    
+          } else {
+            iH1 = hneigh[i][0];
+            iH2 = hneigh[i][1];
+   -        if (hneigh[i][2] == 0) {
+   -          hneigh[i][2] = 1;
+   +        if (hneigh[i][2] != hneigh_stamp) {
+              compute_newsite(x[i],x[iH1],x[iH2],newsite[i]);
+   +          hneigh[i][2] = hneigh_stamp;
+            }
+          }
+          x1 = newsite[i];
+   @@ -163,6 +199,7 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+    
+        jlist = firstneigh[i];
+        jnum = numneigh[i];
+   +    fxtmp = fytmp = fztmp = 0.0;
+    
+        for (jj = 0; jj < jnum; jj++) {
+          j = jlist[jj];
+   @@ -184,20 +221,20 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+            forcelj = r6inv * (lj1[itype][jtype]*r6inv - lj2[itype][jtype]);
+            forcelj *= factor_lj * r2inv;
+    
+   -        f[i][0] += delx*forcelj;
+   -        f[i][1] += dely*forcelj;
+   -        f[i][2] += delz*forcelj;
+   +        fxtmp += delx*forcelj;
+   +        fytmp += dely*forcelj;
+   +        fztmp += delz*forcelj;
+            f[j][0] -= delx*forcelj;
+            f[j][1] -= dely*forcelj;
+            f[j][2] -= delz*forcelj;
+    
+   -        if (eflag) {
+   +        if (EFLAG) {
+              evdwl = r6inv*(lj3[itype][jtype]*r6inv-lj4[itype][jtype]) -
+                offset[itype][jtype];
+              evdwl *= factor_lj;
+            } else evdwl = 0.0;
+    
+   -        if (evflag) ev_tally(i,j,nlocal,newton_pair,
+   +        if (EVFLAG) ev_tally(i,j,nlocal,/* newton_pair = */ 1,
+                                 evdwl,0.0,forcelj,delx,dely,delz);
+          }
+    
+   @@ -224,14 +261,14 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+                  compute_newsite(x[j],x[jH1],x[jH2],newsite[j]);
+                  hneigh[j][0] = jH1;
+                  hneigh[j][1] = jH2;
+   -              hneigh[j][2] = 1;
+   +              hneigh[j][2] = hneigh_stamp;
+    
+                } else {
+                  jH1 = hneigh[j][0];
+                  jH2 = hneigh[j][1];
+   -              if (hneigh[j][2] == 0) {
+   -                hneigh[j][2] = 1;
+   +              if (hneigh[j][2] != hneigh_stamp) {
+                    compute_newsite(x[j],x[jH1],x[jH2],newsite[j]);
+   +                hneigh[j][2] = hneigh_stamp;
+                  }
+                }
+                x2 = newsite[j];
+   @@ -247,7 +284,7 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+    
+            if (rsq < cut_coulsq) {
+              r2inv = 1 / rsq;
+   -          if (!ncoultablebits || rsq <= tabinnersq) {
+   +          if (CTABLE || rsq <= tabinnersq) {
+                r = sqrt(rsq);
+                grij = g_ewald * r;
+                expm2 = exp(-grij*grij);
+   @@ -283,15 +320,17 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+              // virial = sum(r x F) where each water's atoms are near xi and xj
+              // vlist stores 2,4,6 atoms whose forces contribute to virial
+    
+   -          n = 0;
+   -          key = 0;
+   +          if (EVFLAG) {
+   +            n = 0;
+   +            key = 0;
+   +          }
+    
+              if (itype != typeO) {
+   -            f[i][0] += delx * cforce;
+   -            f[i][1] += dely * cforce;
+   -            f[i][2] += delz * cforce;
+   +            fxtmp += delx * cforce;
+   +            fytmp += dely * cforce;
+   +            fztmp += delz * cforce;
+    
+   -            if (vflag) {
+   +            if (VFLAG) {
+                  v[0] = x[i][0] * delx * cforce;
+                  v[1] = x[i][1] * dely * cforce;
+                  v[2] = x[i][2] * delz * cforce;
+   @@ -299,48 +338,50 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+                  v[4] = x[i][0] * delz * cforce;
+                  v[5] = x[i][1] * delz * cforce;
+                }
+   -            vlist[n++] = i;
+   +            if (EVFLAG) vlist[n++] = i;
+    
+              } else {
+   -            key++;
+   +            if (EVFLAG) key += 1;
+    
+   -            fd[0] = delx*cforce;
+   -            fd[1] = dely*cforce;
+   -            fd[2] = delz*cforce;
+   +            fdx = delx*cforce;
+   +            fdy = dely*cforce;
+   +            fdz = delz*cforce;
+    
+   -            fO[0] = fd[0]*(1 - alpha);
+   -            fO[1] = fd[1]*(1 - alpha);
+   -            fO[2] = fd[2]*(1 - alpha);
+   +            fOx = fdx*(1-alpha);
+   +            fOy = fdy*(1-alpha);
+   +            fOz = fdz*(1-alpha);
+    
+   -            fH[0] = 0.5 * alpha * fd[0];
+   -            fH[1] = 0.5 * alpha * fd[1];
+   -            fH[2] = 0.5 * alpha * fd[2];
+   +            fHx = 0.5 * alpha * fdx;
+   +            fHy = 0.5 * alpha * fdy;
+   +            fHz = 0.5 * alpha * fdz;
+    
+   -            f[i][0] += fO[0];
+   -            f[i][1] += fO[1];
+   -            f[i][2] += fO[2];
+   +            fxtmp += fOx;
+   +            fytmp += fOy;
+   +            fztmp += fOz;
+    
+   -            f[iH1][0] += fH[0];
+   -            f[iH1][1] += fH[1];
+   -            f[iH1][2] += fH[2];
+   +            f[iH1][0] += fHx;
+   +            f[iH1][1] += fHy;
+   +            f[iH1][2] += fHz;
+    
+   -            f[iH2][0] += fH[0];
+   -            f[iH2][1] += fH[1];
+   -            f[iH2][2] += fH[2];
+   +            f[iH2][0] += fHx;
+   +            f[iH2][1] += fHy;
+   +            f[iH2][2] += fHz;
+    
+   -            if (vflag) {
+   +            if (VFLAG) {
+                  xH1 = x[iH1];
+                  xH2 = x[iH2];
+   -              v[0] = x[i][0]*fO[0] + xH1[0]*fH[0] + xH2[0]*fH[0];
+   -              v[1] = x[i][1]*fO[1] + xH1[1]*fH[1] + xH2[1]*fH[1];
+   -              v[2] = x[i][2]*fO[2] + xH1[2]*fH[2] + xH2[2]*fH[2];
+   -              v[3] = x[i][0]*fO[1] + xH1[0]*fH[1] + xH2[0]*fH[1];
+   -              v[4] = x[i][0]*fO[2] + xH1[0]*fH[2] + xH2[0]*fH[2];
+   -              v[5] = x[i][1]*fO[2] + xH1[1]*fH[2] + xH2[1]*fH[2];
+   +              v[0] = x[i][0]*fOx + xH1[0]*fHx + xH2[0]*fHx;
+   +              v[1] = x[i][1]*fOy + xH1[1]*fHy + xH2[1]*fHy;
+   +              v[2] = x[i][2]*fOz + xH1[2]*fHz + xH2[2]*fHz;
+   +              v[3] = x[i][0]*fOy + xH1[0]*fHy + xH2[0]*fHy;
+   +              v[4] = x[i][0]*fOz + xH1[0]*fHz + xH2[0]*fHz;
+   +              v[5] = x[i][1]*fOz + xH1[1]*fHz + xH2[1]*fHz;
+   +            }
+   +            if (EVFLAG) {
+   +              vlist[n++] = i;
+   +              vlist[n++] = iH1;
+   +              vlist[n++] = iH2;
+                }
+   -            vlist[n++] = i;
+   -            vlist[n++] = iH1;
+   -            vlist[n++] = iH2;
+              }
+    
+              if (jtype != typeO) {
+   @@ -348,7 +389,7 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+                f[j][1] -= dely * cforce;
+                f[j][2] -= delz * cforce;
+    
+   -            if (vflag) {
+   +            if (VFLAG) {
+                  v[0] -= x[j][0] * delx * cforce;
+                  v[1] -= x[j][1] * dely * cforce;
+                  v[2] -= x[j][2] * delz * cforce;
+   @@ -356,52 +397,54 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+                  v[4] -= x[j][0] * delz * cforce;
+                  v[5] -= x[j][1] * delz * cforce;
+                }
+   -            vlist[n++] = j;
+   +            if (EVFLAG) vlist[n++] = j;
+    
+              } else {
+   -            key += 2;
+   +            if (EVFLAG) key += 2;
+    
+   -            fd[0] = -delx*cforce;
+   -            fd[1] = -dely*cforce;
+   -            fd[2] = -delz*cforce;
+   +            fdx = -delx*cforce;
+   +            fdy = -dely*cforce;
+   +            fdz = -delz*cforce;
+    
+   -            fO[0] = fd[0]*(1 - alpha);
+   -            fO[1] = fd[1]*(1 - alpha);
+   -            fO[2] = fd[2]*(1 - alpha);
+   +            fOx = fdx*(1-alpha);
+   +            fOy = fdy*(1-alpha);
+   +            fOz = fdz*(1-alpha);
+    
+   -            fH[0] = 0.5 * alpha * fd[0];
+   -            fH[1] = 0.5 * alpha * fd[1];
+   -            fH[2] = 0.5 * alpha * fd[2];
+   +            fHx = 0.5 * alpha * fdx;
+   +            fHy = 0.5 * alpha * fdy;
+   +            fHz = 0.5 * alpha * fdz;
+    
+   -            f[j][0] += fO[0];
+   -            f[j][1] += fO[1];
+   -            f[j][2] += fO[2];
+   +            f[j][0] += fOx;
+   +            f[j][1] += fOy;
+   +            f[j][2] += fOz;
+    
+   -            f[jH1][0] += fH[0];
+   -            f[jH1][1] += fH[1];
+   -            f[jH1][2] += fH[2];
+   +            f[jH1][0] += fHx;
+   +            f[jH1][1] += fHy;
+   +            f[jH1][2] += fHz;
+    
+   -            f[jH2][0] += fH[0];
+   -            f[jH2][1] += fH[1];
+   -            f[jH2][2] += fH[2];
+   +            f[jH2][0] += fHx;
+   +            f[jH2][1] += fHy;
+   +            f[jH2][2] += fHz;
+    
+   -            if (vflag) {
+   +            if (VFLAG) {
+                  xH1 = x[jH1];
+                  xH2 = x[jH2];
+   -              v[0] += x[j][0]*fO[0] + xH1[0]*fH[0] + xH2[0]*fH[0];
+   -              v[1] += x[j][1]*fO[1] + xH1[1]*fH[1] + xH2[1]*fH[1];
+   -              v[2] += x[j][2]*fO[2] + xH1[2]*fH[2] + xH2[2]*fH[2];
+   -              v[3] += x[j][0]*fO[1] + xH1[0]*fH[1] + xH2[0]*fH[1];
+   -              v[4] += x[j][0]*fO[2] + xH1[0]*fH[2] + xH2[0]*fH[2];
+   -              v[5] += x[j][1]*fO[2] + xH1[1]*fH[2] + xH2[1]*fH[2];
+   +              v[0] += x[j][0]*fOx + xH1[0]*fHx + xH2[0]*fHx;
+   +              v[1] += x[j][1]*fOy + xH1[1]*fHy + xH2[1]*fHy;
+   +              v[2] += x[j][2]*fOz + xH1[2]*fHz + xH2[2]*fHz;
+   +              v[3] += x[j][0]*fOy + xH1[0]*fHy + xH2[0]*fHy;
+   +              v[4] += x[j][0]*fOz + xH1[0]*fHz + xH2[0]*fHz;
+   +              v[5] += x[j][1]*fOz + xH1[1]*fHz + xH2[1]*fHz;
+   +            }
+   +            if (EVFLAG) {
+   +              vlist[n++] = j;
+   +              vlist[n++] = jH1;
+   +              vlist[n++] = jH2;
+                }
+   -            vlist[n++] = j;
+   -            vlist[n++] = jH1;
+   -            vlist[n++] = jH2;
+              }
+    
+   -          if (eflag) {
+   -            if (!ncoultablebits || rsq <= tabinnersq)
+   +          if (EFLAG) {
+   +            if (CTABLE || rsq <= tabinnersq)
+                  ecoul = prefactor*erfc;
+                else {
+                  table = etable[itable] + fraction*detable[itable];
+   @@ -409,11 +452,14 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+                }
+                if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor;
+              } else ecoul = 0.0;
+   -
+   -          if (evflag) ev_tally_tip4p(key,vlist,v,ecoul,alpha);
+   +          if (EVFLAG) ev_tally_tip4p(key,vlist,v,ecoul,alpha);
+            }
+          }
+        }
+   +
+   +    f[i][0] += fxtmp;
+   +    f[i][1] += fytmp;
+   +    f[i][2] += fztmp;
+      }
+    }
+    
+   @@ -586,8 +632,8 @@ void PairLJCutTIP4PLong::read_restart_settings(FILE *fp)
+      return it as xM
+    ------------------------------------------------------------------------- */
+    
+   -void PairLJCutTIP4PLong::compute_newsite(double *xO, double *xH1,
+   -                                         double *xH2, double *xM)
+   +void PairLJCutTIP4PLong::compute_newsite(const double *xO, const double *xH1,
+   +                                         const double *xH2, double *xM)
+    {
+      double delx1 = xH1[0] - xO[0];
+      double dely1 = xH1[1] - xO[1];
+   diff --git a/src/KSPACE/pair_lj_cut_tip4p_long.h b/src/KSPACE/pair_lj_cut_tip4p_long.h
+   index 4624375b64..935490aeb0 100644
+   --- a/src/KSPACE/pair_lj_cut_tip4p_long.h
+   +++ b/src/KSPACE/pair_lj_cut_tip4p_long.h
+   @@ -46,10 +46,13 @@ class PairLJCutTIP4PLong : public PairLJCutCoulLong {
+    
+      int nmax;            // info on off-oxygen charge sites
+      int **hneigh;        // 0,1 = indices of 2 H associated with O
+   -                       // 2 = 0 if site loc not yet computed, 1 if yes
+   +                       // 2 = step stamp when site loc was last computed
+   +  int hneigh_stamp;    // toggled step stamp used by hneigh[][2]
+      double **newsite;    // locations of charge sites
+    
+   -  void compute_newsite(double *, double *, double *, double *);
+   +  template <const int CTABLE, const int EVFLAG, const int EFLAG, const int VFLAG>
+   +  void eval();
+   +  void compute_newsite(const double *, const double *, const double *, double *);
+    };
+    
+    }    // namespace LAMMPS_NS

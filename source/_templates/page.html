@@ -1,0 +1,274 @@
+{% extends "!page.html" %}
+
+{% block content %}
+  {% if pagename == "index" %}
+    <script>
+      document.body.classList.add("mxl-landing", "mxl-landing-simple");
+    </script>
+    <a class="mxl-skip-link" href="#po-main">Skip to content</a>
+
+    <div class="mxl-simple-shell">
+      <header class="mxl-simple-topbar">
+        <a class="mxl-simple-brand" href="{{ pathto(master_doc) }}" aria-label="FermiLink Project Optimization home">
+          <img
+            src="{{ pathto('_static/img/mark.svg', 1) }}"
+            alt=""
+            loading="eager"
+            decoding="async"
+          />
+          <span>FermiLink · Project Optimization</span>
+        </a>
+
+        <nav class="mxl-simple-nav" aria-label="Site links">
+          <a href="https://fermilink.org">Main docs</a>
+          <a href="#po-packages">Runs</a>
+          <a href="#po-add">Add a run</a>
+          <a href="https://fermilink.org/optimize.html">How optimize works</a>
+        </nav>
+      </header>
+
+      <main id="po-main" class="mxl-simple-main">
+        <div class="mxl-hero-wrapper">
+          {# ── Hero section ── #}
+          <section class="mxl-simple-hero">
+            <p class="mxl-simple-kicker">
+              <span class="mxl-kicker-symbol" aria-hidden="true"></span>
+              Optimization Gallery
+            </p>
+            <h1>
+              Watch <code style="background:rgba(106,214,255,0.15);border-radius:6px;padding:0.1em 0.35em;font-family:var(--mxl-code-font);">fermilink optimize</code>
+              <br/>make real code faster.
+            </h1>
+            <p class="mxl-simple-lead">
+              Every entry below is a self-contained report bundle &mdash; trajectory plots,
+              guardrail metrics, accepted-commit diffs, and the benchmark contract &mdash;
+              exported directly from a live <b>FermiLink</b> optimize run.
+            </p>
+            <div class="mxl-simple-actions">
+              <a class="mxl-simple-btn mxl-simple-btn--primary" href="#po-packages">
+                Browse runs
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                  <path d="M3.5 8h9M9 4.5L12.5 8 9 11.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+              <a class="mxl-simple-btn" href="https://fermilink.org/optimize.html">How optimize works</a>
+              <a class="mxl-simple-btn" href="#po-add">Contribute a run</a>
+            </div>
+          </section>
+
+          {# ── Animated terminal cartoon ── #}
+          <section class="po-cartoon" aria-label="Animated optimize run">
+            <div class="po-term" role="presentation">
+              <div class="po-term-bar">
+                <span class="po-term-dot po-term-dot--r" aria-hidden="true"></span>
+                <span class="po-term-dot po-term-dot--y" aria-hidden="true"></span>
+                <span class="po-term-dot po-term-dot--g" aria-hidden="true"></span>
+                <span class="po-term-title">fermilink &mdash; optimize</span>
+              </div>
+              <div class="po-term-body">
+                <div class="po-term-line">
+                  <span class="po-term-prompt">$</span>
+                  <span class="po-term-cmd"></span><span class="po-term-cursor" aria-hidden="true"></span>
+                </div>
+                <div class="po-term-line po-term-dots" aria-hidden="true"></div>
+                <div class="po-term-chart" aria-hidden="true">
+                  <div class="po-chart-caption">
+                    <span class="po-chart-caption-label">runtime</span>
+                    <span class="po-chart-caption-arrow">&darr;</span>
+                    <span class="po-chart-caption-sub">across accepted iterations</span>
+                  </div>
+                  <svg viewBox="0 0 320 150" class="po-trend" role="img" aria-label="Runtime decreasing across optimize iterations">
+                    {# grid #}
+                    <g class="po-trend-grid">
+                      <line x1="44" y1="24" x2="302" y2="24"/>
+                      <line x1="44" y1="54" x2="302" y2="54"/>
+                      <line x1="44" y1="84" x2="302" y2="84"/>
+                      <line x1="44" y1="114" x2="302" y2="114"/>
+                    </g>
+                    {# axes #}
+                    <line class="po-trend-axis" x1="44" y1="16" x2="44" y2="120"/>
+                    <line class="po-trend-axis" x1="44" y1="120" x2="304" y2="120"/>
+                    {# axis tick labels #}
+                    <text class="po-trend-tick" x="40" y="27" text-anchor="end">1.0x</text>
+                    <text class="po-trend-tick" x="40" y="87" text-anchor="end">0.7x</text>
+                    <text class="po-trend-tick" x="40" y="122" text-anchor="end">0.5x</text>
+                    <text class="po-trend-tick" x="44" y="134" text-anchor="start">iter&nbsp;0</text>
+                    <text class="po-trend-tick" x="304" y="134" text-anchor="end">iter&nbsp;8</text>
+                    {# axis name labels #}
+                    <text class="po-trend-axis-label" x="12" y="16" text-anchor="start">runtime</text>
+                    {# shaded area under the curve #}
+                    <path class="po-trend-area" d="M 54 30 L 84 36 L 114 54 L 144 76 L 174 94 L 204 106 L 234 112 L 264 115 L 294 116 L 294 120 L 54 120 Z"/>
+                    {# the line #}
+                    <path class="po-trend-line" d="M 54 30 L 84 36 L 114 54 L 144 76 L 174 94 L 204 106 L 234 112 L 264 115 L 294 116"/>
+                    {# points #}
+                    <g class="po-trend-points">
+                      <circle cx="54"  cy="30"  r="3.2" style="--i:0"/>
+                      <circle cx="84"  cy="36"  r="3.2" style="--i:1"/>
+                      <circle cx="114" cy="54"  r="3.2" style="--i:2"/>
+                      <circle cx="144" cy="76"  r="3.2" style="--i:3"/>
+                      <circle cx="174" cy="94"  r="3.2" style="--i:4"/>
+                      <circle cx="204" cy="106" r="3.2" style="--i:5"/>
+                      <circle cx="234" cy="112" r="3.2" style="--i:6"/>
+                      <circle cx="264" cy="115" r="3.2" style="--i:7"/>
+                      <circle cx="294" cy="116" r="3.2" style="--i:8"/>
+                    </g>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <p class="po-cartoon-caption">
+              Write a <code>goal.md</code>. FermiLink iterates on the code, benchmarks each
+              change under your contract, and keeps only the winners.
+            </p>
+          </section>
+
+          {# ── Runs gallery ── #}
+          <section id="po-packages" class="mxl-how-section">
+            <h2 class="mxl-section-title">Recorded optimization runs</h2>
+            {% if po_packages %}
+            <div class="mxl-feature-grid" style="grid-template-columns:repeat({{ (po_packages|length) if (po_packages|length) < 3 else 3 }},1fr);">
+              {% for pkg in po_packages %}
+              <a href="{{ pathto(pkg.docname) }}" class="mxl-feature-card" style="text-decoration:none;color:inherit;cursor:pointer;">
+                <div class="mxl-feature-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>
+                </div>
+                <h3>{{ pkg.title }}</h3>
+                <p>
+                  {{ pkg.runs_count }} run{{ 's' if pkg.runs_count != 1 else '' }}{% if pkg.best_delta_pct %} &middot; best &Delta; <code style="color:var(--mxl-simple-accent);font-family:var(--mxl-code-font);font-size:0.88rem;">{{ pkg.best_delta_pct }}</code>{% endif %}
+                </p>
+              </a>
+              {% endfor %}
+            </div>
+            {% else %}
+            <p style="color:var(--mxl-simple-muted);max-width:52ch;margin:0 auto;">
+              No runs recorded yet &mdash; rebuild after dropping a bundle under
+              <code>source/entries/&lt;package&gt;/&lt;task&gt;/</code>.
+            </p>
+            {% endif %}
+          </section>
+
+          {# ── Add a run ── #}
+          <section id="po-add" class="mxl-how-section">
+            <h2 class="mxl-section-title">Add a new run in 3 steps</h2>
+            <div class="mxl-how-steps">
+              <div class="mxl-how-step">
+                <div class="mxl-how-num">1</div>
+                <h3>Run optimize</h3>
+                <p><code style="color:var(--mxl-simple-accent);font-family:var(--mxl-code-font);">fermilink optimize goal.md</code></p>
+              </div>
+              <div class="mxl-how-connector">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </div>
+              <div class="mxl-how-step">
+                <div class="mxl-how-num">2</div>
+                <h3>Drop the bundle</h3>
+                <p><code style="color:var(--mxl-simple-accent);font-family:var(--mxl-code-font);font-size:0.82rem;">scripts/add_entry.py &hellip;</code></p>
+              </div>
+              <div class="mxl-how-connector">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </div>
+              <div class="mxl-how-step">
+                <div class="mxl-how-num">3</div>
+                <h3>Rebuild</h3>
+                <p><code style="color:var(--mxl-simple-accent);font-family:var(--mxl-code-font);">make doc</code></p>
+              </div>
+            </div>
+            <p style="margin-top:1.6rem;font-size:0.9rem;color:var(--mxl-simple-muted);">
+              See the repository <code>README.md</code> in
+              <code>project-optimization/</code> for the full command.
+            </p>
+          </section>
+
+          {# ── Footer ── #}
+          <footer class="mxl-landing-foot">
+            <div class="mxl-landing-foot__inner">
+              <span class="mxl-landing-foot__brand">FermiLink &middot; Project Optimization</span>
+              <nav class="mxl-landing-foot__links" aria-label="Footer links">
+                <a href="https://fermilink.org">Main docs</a>
+                <a href="https://fermilink.org/quickstart.html">Quickstart</a>
+                <a href="https://fermilink.org/optimize.html">Optimize</a>
+              </nav>
+            </div>
+          </footer>
+        </div>
+      </main>
+    </div>
+
+    <script>
+    (function () {
+      var prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      // Kicker symbol cycle (matches main docs landing).
+      var symbols = ["\u25C8", "\u25D3", "\u273D", "\u25D0", "\u25D1", "\u2726"];
+      var symEl = document.querySelector(".mxl-kicker-symbol");
+      if (symEl) {
+        symEl.textContent = symbols[0];
+        if (!prefersReduced) {
+          var symIdx = 0;
+          setInterval(function () {
+            symIdx = (symIdx + 1) % symbols.length;
+            symEl.textContent = symbols[symIdx];
+          }, 1200);
+        }
+      }
+
+      // Terminal cartoon cycle: type command -> show "..." -> draw chart -> hold -> restart.
+      var cmdEl = document.querySelector(".po-term-cmd");
+      var dotsEl = document.querySelector(".po-term-dots");
+      var chartEl = document.querySelector(".po-term-chart");
+      if (!cmdEl || !dotsEl || !chartEl) return;
+
+      var COMMAND = "fermilink optimize goal.md";
+
+      if (prefersReduced) {
+        cmdEl.textContent = COMMAND;
+        dotsEl.textContent = "...";
+        chartEl.classList.add("po-term-chart--visible");
+        return;
+      }
+
+      function wait(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+      }
+
+      async function runCycle() {
+        // Reset state.
+        cmdEl.textContent = "";
+        dotsEl.textContent = "\u00A0"; // nbsp reserves line height
+        chartEl.classList.remove("po-term-chart--visible");
+        await wait(550);
+
+        // Type the command character by character.
+        for (var i = 1; i <= COMMAND.length; i++) {
+          cmdEl.textContent = COMMAND.slice(0, i);
+          await wait(72);
+        }
+        await wait(620);
+
+        // Fade in "..." one dot at a time on line 2.
+        for (var d = 1; d <= 3; d++) {
+          dotsEl.textContent = ".".repeat(d);
+          await wait(430);
+        }
+        await wait(420);
+
+        // Reveal the chart on line 3 (CSS drives the line-draw + point pops).
+        chartEl.classList.add("po-term-chart--visible");
+        await wait(5200);
+      }
+
+      async function loop() {
+        // Small initial delay so hero draws in first.
+        await wait(400);
+        while (true) {
+          await runCycle();
+          await wait(900);
+        }
+      }
+      loop();
+    })();
+    </script>
+  {% else %}
+    {{ super() }}
+  {% endif %}
+{% endblock %}

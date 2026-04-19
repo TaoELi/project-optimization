@@ -1,0 +1,252 @@
+{
+  "build_system": {
+    "build_command": "mkdir -p build && cd build && cmake -C ../cmake/presets/most.cmake -C ../cmake/presets/nolib.cmake -D PKG_GPU=off ../cmake && make -j4",
+    "install_command": "No install required; run executable at build/lmp (optional symlink to ~/.local/bin/lmp).",
+    "type": "cmake+make"
+  },
+  "configuration_parameters": [
+    {
+      "description": "LAMMPS input script that defines run settings.",
+      "example": "in.tip4p_nve",
+      "name": "input_script",
+      "type": "path"
+    },
+    {
+      "description": "LAMMPS data file loaded by the input script.",
+      "example": "water_216_data.lmp",
+      "name": "data_file",
+      "type": "path"
+    },
+    {
+      "description": "TIP4P pair style and geometric/cutoff parameters.",
+      "example": "lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007",
+      "name": "pair_style",
+      "type": "string"
+    },
+    {
+      "description": "Long-range solver used with TIP4P.",
+      "example": "pppm/tip4p 0.0001",
+      "name": "kspace_style",
+      "type": "string"
+    },
+    {
+      "description": "Neighbor skin and build style.",
+      "example": "neighbor 2.0 bin",
+      "name": "neighbor",
+      "type": "string"
+    },
+    {
+      "description": "Integrator timestep.",
+      "example": "0.5",
+      "name": "timestep",
+      "type": "float"
+    },
+    {
+      "description": "Total integration steps from run command.",
+      "example": "200",
+      "name": "run_steps",
+      "type": "int"
+    },
+    {
+      "description": "MPI rank count for benchmark consistency.",
+      "example": "1",
+      "name": "mpi_ranks",
+      "type": "int"
+    },
+    {
+      "description": "OpenMP threads per MPI rank.",
+      "example": "1",
+      "name": "omp_num_threads",
+      "type": "int"
+    }
+  ],
+  "editable_paths": [
+    "src/**/pair_lj_cut_tip4p*.cpp",
+    "src/**/pair_lj_cut_tip4p*.h",
+    "src/**/neighbor*.cpp",
+    "src/**/verlet*.cpp",
+    "src/**/integrate*.cpp",
+    "src/**/atom*.cpp",
+    "src/**/comm*.cpp",
+    "src/**/domain*.cpp"
+  ],
+  "entry_points": [
+    {
+      "call_signature": "int main(int argc, char **argv)",
+      "description": "LAMMPS CLI entry; initializes MPI, constructs LAMMPS object, and processes input script.",
+      "module_or_file": "src/main.cpp",
+      "name": "main"
+    },
+    {
+      "call_signature": "void Input::file()",
+      "description": "Reads and executes commands from the selected input script (e.g., -in in.tip4p_nve).",
+      "module_or_file": "src/input.cpp",
+      "name": "Input::file"
+    },
+    {
+      "call_signature": "void Run::command(int narg, char **arg)",
+      "description": "Implements the run command; initializes and invokes the selected integrator for n steps.",
+      "module_or_file": "src/run.cpp",
+      "name": "Run::command"
+    },
+    {
+      "call_signature": "void Verlet::run(int n)",
+      "description": "Per-step integration loop: neighbor decision/rebuild, comm, pair/bond/kspace force calls, integration updates, and thermo/output.",
+      "module_or_file": "src/verlet.cpp",
+      "name": "Verlet::run"
+    },
+    {
+      "call_signature": "void PairLJCutTIP4PLong::compute(int eflag, int vflag)",
+      "description": "TIP4P long-range pair-force hot path; computes LJ + Coulomb with fictitious M-site mapping and force redistribution.",
+      "module_or_file": "src/KSPACE/pair_lj_cut_tip4p_long.cpp",
+      "name": "PairLJCutTIP4PLong::compute"
+    },
+    {
+      "call_signature": "int Neighbor::decide()",
+      "description": "Determines whether to rebuild neighbor lists based on every/delay/check and displacement checks.",
+      "module_or_file": "src/neighbor.cpp",
+      "name": "Neighbor::decide"
+    },
+    {
+      "call_signature": "void Neighbor::build(int topoflag)",
+      "description": "Builds neighbor lists (binning + list construction), updates displacement history used for future rebuild checks.",
+      "module_or_file": "src/neighbor.cpp",
+      "name": "Neighbor::build"
+    }
+  ],
+  "immutable_paths": [
+    ".fermilink-optimize/inputs/**",
+    "skills/**",
+    "src/** (outside editable_paths)",
+    "examples/**",
+    "unittest/**",
+    "cmake/**"
+  ],
+  "language": "cpp",
+  "output_quantities": [
+    {
+      "description": "Total energy from thermo output; primary NVE drift signal.",
+      "field": "thermo.etotal",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-07
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Potential energy from thermo output; sensitive to pair/kspace changes.",
+      "field": "thermo.pe",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-07
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Kinetic energy from thermo output; used with etotal for drift consistency.",
+      "field": "thermo.ke",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-07
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Per-atom force components (sampled frames) for force-consistency checks.",
+      "field": "forces.xyz",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-08
+      },
+      "type": "array"
+    },
+    {
+      "description": "Pressure consistency check for thermodynamic behavior.",
+      "field": "thermo.press",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-05
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Invariant atom count / no lost atoms during run.",
+      "field": "atom_count",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Count of NaN/Inf in reported thermodynamic/force outputs.",
+      "field": "nan_inf_count",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    }
+  ],
+  "package": "lammps",
+  "runtime_command_template": [
+    "env",
+    "OMP_NUM_THREADS=1",
+    "mpiexec",
+    "-n",
+    "1",
+    "./build/lmp",
+    "-in",
+    "${input_script}",
+    "-log",
+    "${case_id}.log"
+  ],
+  "suggested_cases": [
+    {
+      "description": "Primary short profiling case for TIP4P pair-force + neighbor hot paths.",
+      "id": "train-small",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 1,
+        "omp_num_threads": 1,
+        "repeats": 7,
+        "warmup_repeats": 2
+      },
+      "weight": 0.7
+    },
+    {
+      "description": "Same as train-small, independent repetition bucket for weighted-median stability.",
+      "id": "train-small-repeat",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 1,
+        "omp_num_threads": 1,
+        "repeats": 5,
+        "warmup_repeats": 1
+      },
+      "weight": 0.1
+    },
+    {
+      "description": "Longer-horizon correctness/perf validation for NVE energy behavior and force consistency.",
+      "id": "test-long",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve_long",
+        "mpi_ranks": 1,
+        "omp_num_threads": 1,
+        "repeats": 3,
+        "warmup_repeats": 1
+      },
+      "weight": 0.2
+    }
+  ],
+  "threading_model": {
+    "default_threads": 1,
+    "description": "Primary parallel model is MPI domain decomposition. Pair/neighbor/integration hot paths execute within each rank; ghost exchange and reductions are MPI-based. OpenMP support is optional; comm code defaults to 1 thread if OMP_NUM_THREADS is unset and enforces consistency across ranks.",
+    "env_vars": [
+      "OMP_NUM_THREADS"
+    ]
+  }
+}

@@ -1,0 +1,324 @@
+Iteration 0003 — 221447e9f42a (accepted)
+========================================
+
+
+Change summary
+--------------
+
+
+Flatten TIP4P long-pair hot-loop data access by using contiguous x/f [3]-views and hoisting per-i hneigh/LJ/Coulomb constants to reduce inner-loop pointer-chasing overhead.
+
+Acceptance rationale
+--------------------
+
+
+Primary metric decreased from 0.307969708520 to 0.291823301988 (+5.24% vs incumbent) with correctness/guardrails passing and no hard reject, clearing the +2.0% acceptance threshold.
+
+Guardrails & metrics
+--------------------
+
+
++------------------+---------------------------------------+
+| field            | value                                 |
++==================+=======================================+
+| decision         | ACCEPTED                              |
++------------------+---------------------------------------+
+| correctness      | ok                                    |
++------------------+---------------------------------------+
+| correctness mode | field_tolerances                      |
++------------------+---------------------------------------+
+| hard reject      | no                                    |
++------------------+---------------------------------------+
+| guardrail errors | 0                                     |
++------------------+---------------------------------------+
+| incumbent commit | 2687c05eb308                          |
++------------------+---------------------------------------+
+| candidate commit | 221447e9f42a                          |
++------------------+---------------------------------------+
+| incumbent metric | 0.30797                               |
++------------------+---------------------------------------+
+| candidate metric | 0.291823                              |
++------------------+---------------------------------------+
+| baseline metric  | 0.34835                               |
++------------------+---------------------------------------+
+| Δ vs incumbent   | +5.243% (lower-is-better sign)        |
++------------------+---------------------------------------+
+| changed files    | src/KSPACE/pair_lj_cut_tip4p_long.cpp |
++------------------+---------------------------------------+
+
+
+Diffstat
+--------
+
+
+.. code-block:: text
+
+    src/KSPACE/pair_lj_cut_tip4p_long.cpp | 119 +++++++++++++++++++---------------
+    1 file changed, 66 insertions(+), 53 deletions(-)
+
+Diff
+----
+
+
+:download:`download full diff <_diffs/iter_0003_221447e9f42a.diff>`
+
+.. code-block:: diff
+
+   diff --git a/src/KSPACE/pair_lj_cut_tip4p_long.cpp b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   index 340b13aab9..4f23c68d6a 100644
+   --- a/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   +++ b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   @@ -139,8 +139,8 @@ void PairLJCutTIP4PLong::eval()
+      int n,vlist[6];
+      int iH1,iH2,jH1,jH2;
+    
+   -  const double * const * const x = atom->x;
+   -  double * const * const f = atom->f;
+   +  const double (* const x)[3] = (const double (*)[3]) atom->x[0];
+   +  double (* const f)[3] = (double (*)[3]) atom->f[0];
+      const double * const q = atom->q;
+      const tagint * const tag = atom->tag;
+      const int * const type = atom->type;
+   @@ -149,6 +149,8 @@ void PairLJCutTIP4PLong::eval()
+      const double * const special_lj = force->special_lj;
+      const double qqrd2e = force->qqrd2e;
+      const double cut_coulsqplus = (cut_coul+2.0*qdist) * (cut_coul+2.0*qdist);
+   +  const double alpha_O = 1.0 - alpha;
+   +  const double alpha_H = 0.5 * alpha;
+    
+      double fxtmp,fytmp,fztmp;
+    
+   @@ -166,12 +168,20 @@ void PairLJCutTIP4PLong::eval()
+        ytmp = x[i][1];
+        ztmp = x[i][2];
+        itype = type[i];
+   +    int * const hneighi = hneigh[i];
+   +    const double * const cut_ljsq_i = cut_ljsq[itype];
+   +    const double * const lj1_i = lj1[itype];
+   +    const double * const lj2_i = lj2[itype];
+   +    const double * const lj3_i = lj3[itype];
+   +    const double * const lj4_i = lj4[itype];
+   +    const double * const offset_i = offset[itype];
+   +    const double qqrd2e_qi = qqrd2e * qtmp;
+    
+        // if atom I = water O, set x1 = offset charge site
+        // else x1 = x of atom I
+    
+        if (itype == typeO) {
+   -      if (hneigh[i][0] < 0) {
+   +      if (hneighi[0] < 0) {
+            iH1 = atom->map(tag[i] + 1);
+            iH2 = atom->map(tag[i] + 2);
+            if (iH1 == -1 || iH2 == -1)
+   @@ -182,16 +192,16 @@ void PairLJCutTIP4PLong::eval()
+            iH1 = domain->closest_image(i,iH1);
+            iH2 = domain->closest_image(i,iH2);
+            compute_newsite(x[i],x[iH1],x[iH2],newsite[i]);
+   -        hneigh[i][0] = iH1;
+   -        hneigh[i][1] = iH2;
+   -        hneigh[i][2] = hneigh_stamp;
+   +        hneighi[0] = iH1;
+   +        hneighi[1] = iH2;
+   +        hneighi[2] = hneigh_stamp;
+    
+          } else {
+   -        iH1 = hneigh[i][0];
+   -        iH2 = hneigh[i][1];
+   -        if (hneigh[i][2] != hneigh_stamp) {
+   +        iH1 = hneighi[0];
+   +        iH2 = hneighi[1];
+   +        if (hneighi[2] != hneigh_stamp) {
+              compute_newsite(x[i],x[iH1],x[iH2],newsite[i]);
+   -          hneigh[i][2] = hneigh_stamp;
+   +          hneighi[2] = hneigh_stamp;
+            }
+          }
+          x1 = newsite[i];
+   @@ -206,19 +216,20 @@ void PairLJCutTIP4PLong::eval()
+          factor_lj = special_lj[sbmask(j)];
+          factor_coul = special_coul[sbmask(j)];
+          j &= NEIGHMASK;
+   +      const double * const xj = x[j];
+    
+   -      delx = xtmp - x[j][0];
+   -      dely = ytmp - x[j][1];
+   -      delz = ztmp - x[j][2];
+   +      delx = xtmp - xj[0];
+   +      dely = ytmp - xj[1];
+   +      delz = ztmp - xj[2];
+          rsq = delx*delx + dely*dely + delz*delz;
+          jtype = type[j];
+    
+          // LJ interaction based on true rsq
+    
+   -      if (rsq < cut_ljsq[itype][jtype]) {
+   +      if (rsq < cut_ljsq_i[jtype]) {
+            r2inv = 1.0/rsq;
+            r6inv = r2inv*r2inv*r2inv;
+   -        forcelj = r6inv * (lj1[itype][jtype]*r6inv - lj2[itype][jtype]);
+   +        forcelj = r6inv * (lj1_i[jtype]*r6inv - lj2_i[jtype]);
+            forcelj *= factor_lj * r2inv;
+    
+            fxtmp += delx*forcelj;
+   @@ -229,8 +240,8 @@ void PairLJCutTIP4PLong::eval()
+            f[j][2] -= delz*forcelj;
+    
+            if (EFLAG) {
+   -          evdwl = r6inv*(lj3[itype][jtype]*r6inv-lj4[itype][jtype]) -
+   -            offset[itype][jtype];
+   +          evdwl = r6inv*(lj3_i[jtype]*r6inv-lj4_i[jtype]) -
+   +            offset_i[jtype];
+              evdwl *= factor_lj;
+            } else evdwl = 0.0;
+    
+   @@ -248,7 +259,8 @@ void PairLJCutTIP4PLong::eval()
+              // else x2 = x of atom J
+    
+              if (jtype == typeO) {
+   -            if (hneigh[j][0] < 0) {
+   +            int * const hneighj = hneigh[j];
+   +            if (hneighj[0] < 0) {
+                  jH1 = atom->map(tag[j] + 1);
+                  jH2 = atom->map(tag[j] + 2);
+                  if (jH1 == -1 || jH2 == -1)
+   @@ -259,16 +271,16 @@ void PairLJCutTIP4PLong::eval()
+                  jH1 = domain->closest_image(j,jH1);
+                  jH2 = domain->closest_image(j,jH2);
+                  compute_newsite(x[j],x[jH1],x[jH2],newsite[j]);
+   -              hneigh[j][0] = jH1;
+   -              hneigh[j][1] = jH2;
+   -              hneigh[j][2] = hneigh_stamp;
+   +              hneighj[0] = jH1;
+   +              hneighj[1] = jH2;
+   +              hneighj[2] = hneigh_stamp;
+    
+                } else {
+   -              jH1 = hneigh[j][0];
+   -              jH2 = hneigh[j][1];
+   -              if (hneigh[j][2] != hneigh_stamp) {
+   +              jH1 = hneighj[0];
+   +              jH2 = hneighj[1];
+   +              if (hneighj[2] != hneigh_stamp) {
+                    compute_newsite(x[j],x[jH1],x[jH2],newsite[j]);
+   -                hneigh[j][2] = hneigh_stamp;
+   +                hneighj[2] = hneigh_stamp;
+                  }
+                }
+                x2 = newsite[j];
+   @@ -283,6 +295,7 @@ void PairLJCutTIP4PLong::eval()
+            // Coulombic interaction based on modified rsq
+    
+            if (rsq < cut_coulsq) {
+   +          const double qiqj = qtmp * q[j];
+              r2inv = 1 / rsq;
+              if (CTABLE || rsq <= tabinnersq) {
+                r = sqrt(rsq);
+   @@ -290,7 +303,7 @@ void PairLJCutTIP4PLong::eval()
+                expm2 = exp(-grij*grij);
+                t = 1.0 / (1.0 + EWALD_P*grij);
+                erfc = t * (A1+t*(A2+t*(A3+t*(A4+t*A5)))) * expm2;
+   -            prefactor = qqrd2e * qtmp*q[j]/r;
+   +            prefactor = qqrd2e_qi * q[j] / r;
+                forcecoul = prefactor * (erfc + EWALD_F*grij*expm2);
+                if (factor_coul < 1.0) {
+                  forcecoul -= (1.0-factor_coul)*prefactor;
+   @@ -302,10 +315,10 @@ void PairLJCutTIP4PLong::eval()
+                itable >>= ncoulshiftbits;
+                fraction = ((double) rsq_lookup.f - rtable[itable]) * drtable[itable];
+                table = ftable[itable] + fraction*dftable[itable];
+   -            forcecoul = qtmp*q[j] * table;
+   +            forcecoul = qiqj * table;
+                if (factor_coul < 1.0) {
+                  table = ctable[itable] + fraction*dctable[itable];
+   -              prefactor = qtmp*q[j] * table;
+   +              prefactor = qiqj * table;
+                  forcecoul -= (1.0-factor_coul)*prefactor;
+                }
+              }
+   @@ -347,13 +360,13 @@ void PairLJCutTIP4PLong::eval()
+                fdy = dely*cforce;
+                fdz = delz*cforce;
+    
+   -            fOx = fdx*(1-alpha);
+   -            fOy = fdy*(1-alpha);
+   -            fOz = fdz*(1-alpha);
+   +            fOx = fdx*alpha_O;
+   +            fOy = fdy*alpha_O;
+   +            fOz = fdz*alpha_O;
+    
+   -            fHx = 0.5 * alpha * fdx;
+   -            fHy = 0.5 * alpha * fdy;
+   -            fHz = 0.5 * alpha * fdz;
+   +            fHx = alpha_H * fdx;
+   +            fHy = alpha_H * fdy;
+   +            fHz = alpha_H * fdz;
+    
+                fxtmp += fOx;
+                fytmp += fOy;
+   @@ -390,12 +403,12 @@ void PairLJCutTIP4PLong::eval()
+                f[j][2] -= delz * cforce;
+    
+                if (VFLAG) {
+   -              v[0] -= x[j][0] * delx * cforce;
+   -              v[1] -= x[j][1] * dely * cforce;
+   -              v[2] -= x[j][2] * delz * cforce;
+   -              v[3] -= x[j][0] * dely * cforce;
+   -              v[4] -= x[j][0] * delz * cforce;
+   -              v[5] -= x[j][1] * delz * cforce;
+   +              v[0] -= xj[0] * delx * cforce;
+   +              v[1] -= xj[1] * dely * cforce;
+   +              v[2] -= xj[2] * delz * cforce;
+   +              v[3] -= xj[0] * dely * cforce;
+   +              v[4] -= xj[0] * delz * cforce;
+   +              v[5] -= xj[1] * delz * cforce;
+                }
+                if (EVFLAG) vlist[n++] = j;
+    
+   @@ -406,13 +419,13 @@ void PairLJCutTIP4PLong::eval()
+                fdy = -dely*cforce;
+                fdz = -delz*cforce;
+    
+   -            fOx = fdx*(1-alpha);
+   -            fOy = fdy*(1-alpha);
+   -            fOz = fdz*(1-alpha);
+   +            fOx = fdx*alpha_O;
+   +            fOy = fdy*alpha_O;
+   +            fOz = fdz*alpha_O;
+    
+   -            fHx = 0.5 * alpha * fdx;
+   -            fHy = 0.5 * alpha * fdy;
+   -            fHz = 0.5 * alpha * fdz;
+   +            fHx = alpha_H * fdx;
+   +            fHy = alpha_H * fdy;
+   +            fHz = alpha_H * fdz;
+    
+                f[j][0] += fOx;
+                f[j][1] += fOy;
+   @@ -429,12 +442,12 @@ void PairLJCutTIP4PLong::eval()
+                if (VFLAG) {
+                  xH1 = x[jH1];
+                  xH2 = x[jH2];
+   -              v[0] += x[j][0]*fOx + xH1[0]*fHx + xH2[0]*fHx;
+   -              v[1] += x[j][1]*fOy + xH1[1]*fHy + xH2[1]*fHy;
+   -              v[2] += x[j][2]*fOz + xH1[2]*fHz + xH2[2]*fHz;
+   -              v[3] += x[j][0]*fOy + xH1[0]*fHy + xH2[0]*fHy;
+   -              v[4] += x[j][0]*fOz + xH1[0]*fHz + xH2[0]*fHz;
+   -              v[5] += x[j][1]*fOz + xH1[1]*fHz + xH2[1]*fHz;
+   +              v[0] += xj[0]*fOx + xH1[0]*fHx + xH2[0]*fHx;
+   +              v[1] += xj[1]*fOy + xH1[1]*fHy + xH2[1]*fHy;
+   +              v[2] += xj[2]*fOz + xH1[2]*fHz + xH2[2]*fHz;
+   +              v[3] += xj[0]*fOy + xH1[0]*fHy + xH2[0]*fHy;
+   +              v[4] += xj[0]*fOz + xH1[0]*fHz + xH2[0]*fHz;
+   +              v[5] += xj[1]*fOz + xH1[1]*fHz + xH2[1]*fHz;
+                }
+                if (EVFLAG) {
+                  vlist[n++] = j;
+   @@ -448,7 +461,7 @@ void PairLJCutTIP4PLong::eval()
+                  ecoul = prefactor*erfc;
+                else {
+                  table = etable[itable] + fraction*detable[itable];
+   -              ecoul = qtmp*q[j] * table;
+   +              ecoul = qiqj * table;
+                }
+                if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor;
+              } else ecoul = 0.0;

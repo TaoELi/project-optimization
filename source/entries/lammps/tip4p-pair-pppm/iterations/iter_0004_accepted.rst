@@ -1,0 +1,221 @@
+Iteration 0004 — 08902c8107d6 (accepted)
+========================================
+
+
+Change summary
+--------------
+
+
+Precompute TIP4P oxygen virtual sites once per step in compute() and remove per-pair lazy hneigh stamp refreshes from the eval() hot loop.
+
+Acceptance rationale
+--------------------
+
+
+Primary metric improved from 0.291823301988 to 0.285449812480 (+2.18% vs incumbent) with correctness/guardrails passing and no hard reject, clearing the 2.0% minimum improvement threshold.
+
+Guardrails & metrics
+--------------------
+
+
++------------------+----------------------------------------------------------------------------+
+| field            | value                                                                      |
++==================+============================================================================+
+| decision         | ACCEPTED                                                                   |
++------------------+----------------------------------------------------------------------------+
+| correctness      | ok                                                                         |
++------------------+----------------------------------------------------------------------------+
+| correctness mode | field_tolerances                                                           |
++------------------+----------------------------------------------------------------------------+
+| hard reject      | no                                                                         |
++------------------+----------------------------------------------------------------------------+
+| guardrail errors | 0                                                                          |
++------------------+----------------------------------------------------------------------------+
+| incumbent commit | 221447e9f42a                                                               |
++------------------+----------------------------------------------------------------------------+
+| candidate commit | 08902c8107d6                                                               |
++------------------+----------------------------------------------------------------------------+
+| incumbent metric | 0.291823                                                                   |
++------------------+----------------------------------------------------------------------------+
+| candidate metric | 0.28545                                                                    |
++------------------+----------------------------------------------------------------------------+
+| baseline metric  | 0.34835                                                                    |
++------------------+----------------------------------------------------------------------------+
+| Δ vs incumbent   | +2.184% (lower-is-better sign)                                             |
++------------------+----------------------------------------------------------------------------+
+| changed files    | src/KSPACE/pair_lj_cut_tip4p_long.cpp, src/KSPACE/pair_lj_cut_tip4p_long.h |
++------------------+----------------------------------------------------------------------------+
+
+
+Diffstat
+--------
+
+
+.. code-block:: text
+
+    src/KSPACE/pair_lj_cut_tip4p_long.cpp | 89 +++++++++++++----------------------
+    src/KSPACE/pair_lj_cut_tip4p_long.h   |  2 -
+    2 files changed, 33 insertions(+), 58 deletions(-)
+
+Diff
+----
+
+
+:download:`download full diff <_diffs/iter_0004_08902c8107d6.diff>`
+
+.. code-block:: diff
+
+   diff --git a/src/KSPACE/pair_lj_cut_tip4p_long.cpp b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   index 4f23c68d6a..89827e9fb7 100644
+   --- a/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   +++ b/src/KSPACE/pair_lj_cut_tip4p_long.cpp
+   @@ -51,7 +51,6 @@ PairLJCutTIP4PLong::PairLJCutTIP4PLong(LAMMPS *lmp) :
+    
+      nmax = 0;
+      hneigh = nullptr;
+   -  hneigh_stamp = 0;
+      newsite = nullptr;
+    
+      // TIP4P cannot compute virial as F dot r
+   @@ -76,26 +75,47 @@ void PairLJCutTIP4PLong::compute(int eflag, int vflag)
+    
+      const int nlocal = atom->nlocal;
+      const int nall = nlocal + atom->nghost;
+   +  const double (* const x)[3] = (const double (*)[3]) atom->x[0];
+   +  const tagint * const tag = atom->tag;
+   +  const int * const type = atom->type;
+    
+      // reallocate hneigh & newsite if necessary
+      // initialize hneigh[0] to -1 on steps when reneighboring occurred
+   -  // use toggled step stamp in hneigh[2] to avoid per-step full-array clears
+    
+      if (atom->nmax > nmax) {
+        nmax = atom->nmax;
+        memory->destroy(hneigh);
+   -    memory->create(hneigh,nmax,3,"pair:hneigh");
+   +    memory->create(hneigh,nmax,2,"pair:hneigh");
+        memory->destroy(newsite);
+        memory->create(newsite,nmax,3,"pair:newsite");
+   -    for (int i = 0; i < nmax; i++) {
+   -      hneigh[i][0] = -1;
+   -      hneigh[i][2] = -1;
+   -    }
+   +    for (int i = 0; i < nmax; i++) hneigh[i][0] = -1;
+      }
+    
+      if (neighbor->ago == 0)
+        for (int i = 0; i < nall; i++) hneigh[i][0] = -1;
+   -  hneigh_stamp = 1 - hneigh_stamp;
+   +
+   +  // eagerly refresh all TIP4P virtual sites once per step to keep eval()
+   +  // branch-light and avoid per-pair hneigh stamp checks
+   +  for (int i = 0; i < nall; i++) {
+   +    if (type[i] != typeO) continue;
+   +    int * const hneighi = hneigh[i];
+   +    int iH1 = hneighi[0];
+   +    int iH2 = hneighi[1];
+   +    if (iH1 < 0) {
+   +      iH1 = atom->map(tag[i] + 1);
+   +      iH2 = atom->map(tag[i] + 2);
+   +      if (iH1 == -1 || iH2 == -1)
+   +        error->one(FLERR,"TIP4P hydrogen is missing");
+   +      if (type[iH1] != typeH || type[iH2] != typeH)
+   +        error->one(FLERR,"TIP4P hydrogen has incorrect atom type");
+   +      // set iH1,iH2 to closest image to O
+   +      iH1 = domain->closest_image(i,iH1);
+   +      iH2 = domain->closest_image(i,iH2);
+   +      hneighi[0] = iH1;
+   +      hneighi[1] = iH2;
+   +    }
+   +    compute_newsite(x[i],x[iH1],x[iH2],newsite[i]);
+   +  }
+    
+      if (!ncoultablebits) {
+        if (evflag) {
+   @@ -142,7 +162,6 @@ void PairLJCutTIP4PLong::eval()
+      const double (* const x)[3] = (const double (*)[3]) atom->x[0];
+      double (* const f)[3] = (double (*)[3]) atom->f[0];
+      const double * const q = atom->q;
+   -  const tagint * const tag = atom->tag;
+      const int * const type = atom->type;
+      const int nlocal = atom->nlocal;
+      const double * const special_coul = force->special_coul;
+   @@ -181,29 +200,8 @@ void PairLJCutTIP4PLong::eval()
+        // else x1 = x of atom I
+    
+        if (itype == typeO) {
+   -      if (hneighi[0] < 0) {
+   -        iH1 = atom->map(tag[i] + 1);
+   -        iH2 = atom->map(tag[i] + 2);
+   -        if (iH1 == -1 || iH2 == -1)
+   -          error->one(FLERR,"TIP4P hydrogen is missing");
+   -        if (atom->type[iH1] != typeH || atom->type[iH2] != typeH)
+   -          error->one(FLERR,"TIP4P hydrogen has incorrect atom type");
+   -        // set iH1,iH2 to closest image to O
+   -        iH1 = domain->closest_image(i,iH1);
+   -        iH2 = domain->closest_image(i,iH2);
+   -        compute_newsite(x[i],x[iH1],x[iH2],newsite[i]);
+   -        hneighi[0] = iH1;
+   -        hneighi[1] = iH2;
+   -        hneighi[2] = hneigh_stamp;
+   -
+   -      } else {
+   -        iH1 = hneighi[0];
+   -        iH2 = hneighi[1];
+   -        if (hneighi[2] != hneigh_stamp) {
+   -          compute_newsite(x[i],x[iH1],x[iH2],newsite[i]);
+   -          hneighi[2] = hneigh_stamp;
+   -        }
+   -      }
+   +      iH1 = hneighi[0];
+   +      iH2 = hneighi[1];
+          x1 = newsite[i];
+        } else x1 = x[i];
+    
+   @@ -259,30 +257,9 @@ void PairLJCutTIP4PLong::eval()
+              // else x2 = x of atom J
+    
+              if (jtype == typeO) {
+   -            int * const hneighj = hneigh[j];
+   -            if (hneighj[0] < 0) {
+   -              jH1 = atom->map(tag[j] + 1);
+   -              jH2 = atom->map(tag[j] + 2);
+   -              if (jH1 == -1 || jH2 == -1)
+   -                error->one(FLERR,"TIP4P hydrogen is missing");
+   -              if (atom->type[jH1] != typeH || atom->type[jH2] != typeH)
+   -                error->one(FLERR,"TIP4P hydrogen has incorrect atom type");
+   -              // set jH1,jH2 to closest image to O
+   -              jH1 = domain->closest_image(j,jH1);
+   -              jH2 = domain->closest_image(j,jH2);
+   -              compute_newsite(x[j],x[jH1],x[jH2],newsite[j]);
+   -              hneighj[0] = jH1;
+   -              hneighj[1] = jH2;
+   -              hneighj[2] = hneigh_stamp;
+   -
+   -            } else {
+   -              jH1 = hneighj[0];
+   -              jH2 = hneighj[1];
+   -              if (hneighj[2] != hneigh_stamp) {
+   -                compute_newsite(x[j],x[jH1],x[jH2],newsite[j]);
+   -                hneighj[2] = hneigh_stamp;
+   -              }
+   -            }
+   +            const int * const hneighj = hneigh[j];
+   +            jH1 = hneighj[0];
+   +            jH2 = hneighj[1];
+                x2 = newsite[j];
+              } else x2 = x[j];
+    
+   diff --git a/src/KSPACE/pair_lj_cut_tip4p_long.h b/src/KSPACE/pair_lj_cut_tip4p_long.h
+   index 935490aeb0..99324466f5 100644
+   --- a/src/KSPACE/pair_lj_cut_tip4p_long.h
+   +++ b/src/KSPACE/pair_lj_cut_tip4p_long.h
+   @@ -46,8 +46,6 @@ class PairLJCutTIP4PLong : public PairLJCutCoulLong {
+    
+      int nmax;            // info on off-oxygen charge sites
+      int **hneigh;        // 0,1 = indices of 2 H associated with O
+   -                       // 2 = step stamp when site loc was last computed
+   -  int hneigh_stamp;    // toggled step stamp used by hneigh[][2]
+      double **newsite;    // locations of charge sites
+    
+      template <const int CTABLE, const int EVFLAG, const int EFLAG, const int VFLAG>

@@ -1,0 +1,25 @@
+{
+  "analysis_path": "/Users/taoli/.fermilink/workspaces/test_optimize/lammps-optimize-tip4p/.fermilink-optimize/autogen/goal_analysis.json",
+  "benchmark_path": "/Users/taoli/.fermilink/workspaces/test_optimize/lammps-optimize-tip4p/.fermilink-optimize/autogen/benchmark.yaml",
+  "created_at_utc": "2026-04-09T03:06:30.175494Z",
+  "created_files": {
+    "analysis": true,
+    "benchmark": true,
+    "run_script": true,
+    "runner": true,
+    "setup": true,
+    "submit_launcher": true
+  },
+  "goal_path": "/Users/taoli/.fermilink/workspaces/test_optimize/cpp_lammps/cpp-lammps-tip4p-water-nve-goal.md",
+  "goal_sha256": "a9099be6fc95bb8205a010189ffa80393d9931f771b6743e8251501165fa5045",
+  "language": "cpp",
+  "mode": "goal",
+  "package_id": "lammps",
+  "project_root": "/Users/taoli/.fermilink/workspaces/test_optimize/lammps-optimize-tip4p",
+  "review_notes": "1) Only `in.tip4p_nve`, `in.tip4p_nve_long`, and `water_216_data.lmp` are present in `.fermilink-optimize/inputs/all`; `in.tip4p_nve_medium`/`large` are not present in this workspace. 2) Goal text contains an example MPI launcher snippet showing `-np 16`; for this target I assumed the explicit requirement \u201cexactly 1 rank\u201d is authoritative. 3) Input scripts currently use `units electron` with TIP4P settings; confirm this is intentional for your benchmark baseline.\n- Verify `build/lmp` exists and `mpiexec` (or `mpirun`) is available on `PATH`.\n- Verify `FERMILINK_GOAL_INPUT_ROOT` points to the staged workload root; YAML currently sets `.fermilink-optimize/inputs/all`.\n- Objective metric is normalized runtime (`wall_seconds_per_100_steps`) and summary uses weighted median of that metric.\n- Correctness tolerances cover thermo/atom-count/NaN-Inf fields; force-component field (`forces.xyz`) is not emitted by these current input scripts.\n- Runner writes per-run LAMMPS logs to `.fermilink-optimize/runs/autogen/` when benchmark executions run.",
+  "run_script_path": "/Users/taoli/.fermilink/workspaces/test_optimize/lammps-optimize-tip4p/.fermilink-optimize/autogen/run_optimize.sh",
+  "runner_path": "/Users/taoli/.fermilink/workspaces/test_optimize/lammps-optimize-tip4p/.fermilink-optimize/autogen/benchmark_runner.py",
+  "schema_version": 1,
+  "setup_script_path": "/Users/taoli/.fermilink/workspaces/test_optimize/lammps-optimize-tip4p/.fermilink-optimize/autogen/setup_env.sh",
+  "submit_launcher_path": "/Users/taoli/.fermilink/workspaces/test_optimize/lammps-optimize-tip4p/.fermilink-optimize/autogen/submit_poll_launcher.py"
+}
