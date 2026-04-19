@@ -20,6 +20,11 @@ directory itself. By default it infers `<package>` and `<task>` from the
 target repo's current branch, which is expected to look like
 `fermilink-optimize/<package>-<task>`. You can still override either value with
 `--package` and `--task` when needed.
+Pass `--git-push` to forward that flag to the underlying
+`skills/optimize-report/assets/build_report.py` script, which will then run its
+guarded `git push --set-upstream` flow for checked-out `fermilink-optimize*`
+branches. When that remote is GitHub, the generated report pages also hyperlink
+displayed commit hashes back to the published GitHub commit pages.
 
 This writes a per-task bundle to
 `project-optimization/source/entries/<package>/<task>/`. Per-package summary

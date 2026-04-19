@@ -17,7 +17,7 @@ target repo's current branch name. The default branch pattern is expected to be:
     fermilink-optimize/<package>-<task>
 
 Optional flags (passed through to the skill): ``--title``, ``--metric-label``,
-``--direction {lower,higher}``.
+``--direction {lower,higher}``, ``--git-push``.
 """
 
 from __future__ import annotations
@@ -131,6 +131,15 @@ def main() -> None:
     ap.add_argument("--title", default=None, help="report title (optional)")
     ap.add_argument("--metric-label", default=None)
     ap.add_argument("--direction", choices=["lower", "higher"], default=None)
+    ap.add_argument(
+        "--git-push",
+        action="store_true",
+        help=(
+            "after generating the bundle, forward --git-push to the optimize-report "
+            "skill so it can safely push fermilink-optimize* branches and add "
+            "GitHub commit links when the remote is github.com"
+        ),
+    )
     args = ap.parse_args()
 
     if not SKILL_BUILDER.exists():
@@ -160,6 +169,8 @@ def main() -> None:
         cmd += ["--metric-label", args.metric_label]
     if args.direction:
         cmd += ["--direction", args.direction]
+    if args.git_push:
+        cmd.append("--git-push")
 
     print(f"[add_entry] invoking {SKILL_BUILDER.name}")
     print(f"[add_entry] source : {optimize_dir}")

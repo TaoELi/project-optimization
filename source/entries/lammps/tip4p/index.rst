@@ -150,3 +150,175 @@ Data
 
 - :download:`results.tsv <data/results.tsv>`
 - :download:`summary.json <data/summary.json>`
+
+Rerun
+-----
+
+
+Use the bundled contract files from this report to recreate the optimization against a fresh upstream checkout.
+
+- default upstream clone: ``git@github.com:skilled-scipkg/lammps.git``
+- confirm the upstream default branch before creating the worktree: `upstream GitHub repo <https://github.com/skilled-scipkg/lammps>`_
+- detected package language: ``cpp``; use ``fermilink-optimize-cpp`` for goal-mode reruns
+- ``contract/run_optimize.sh`` and ``contract/setup_env.sh`` record the original campaign, but they can contain site-specific absolute paths
+- if :download:`goal_inputs.json <contract/goal_inputs.json>` is present, restage the listed auxiliary workload files before rerunning
+
+.. code-block:: bash
+
+   git clone git@github.com:skilled-scipkg/lammps.git
+   cd lammps
+   git worktree add -b fermilink-optimize/lammps-<modified-feature> ../lammps-<modified-feature> <default-branch>
+
+Path 1: rerun from the bundled :download:`goal.md <contract/goal.md>`.
+
+Run this from the cloned main repo so the launcher can create or reuse the sibling worktree:
+
+.. code-block:: bash
+
+   fermilink-optimize-cpp \
+     --project-root "$PWD" \
+     --goal /path/to/report/contract/goal.md \
+     --branch fermilink-optimize/lammps-<modified-feature> \
+     --worktree-root .. \
+     --worktree-name lammps-<modified-feature>
+
+Path 2: rerun more deterministically from the copied :download:`benchmark.yaml <contract/benchmark.yaml>` and :download:`benchmark_runner.py <contract/benchmark_runner.py>`.
+
+This avoids regenerating the benchmark contract from ``goal.md`` before the campaign starts:
+
+.. code-block:: bash
+
+   cd ../lammps-<modified-feature>
+   mkdir -p .fermilink-optimize/autogen
+   cp /path/to/report/contract/benchmark.yaml .fermilink-optimize/autogen/benchmark.yaml
+   cp /path/to/report/contract/benchmark_runner.py .fermilink-optimize/autogen/benchmark_runner.py
+   printf '%s\n' '.fermilink-optimize/' >> .git/info/exclude
+   fermilink optimize lammps "$PWD" \
+     --benchmark "$PWD/.fermilink-optimize/autogen/benchmark.yaml" \
+     --skills-source existing
+
+Building environment
+~~~~~~~~~~~~~~~~~~~~
+
+
+These commands come from the copied ``## Build`` block in :download:`goal.md <contract/goal.md>` and are rerun before benchmarks through the benchmark configuration.
+
+Check that they work in your local environment before launching a long run. If they do not, update the ``## Build`` section in ``goal.md`` or the corresponding ``runtime.pre_commands`` setting in :download:`benchmark.yaml <contract/benchmark.yaml>`.
+
+.. code-block:: bash
+
+   mkdir -p build
+   cd build
+   cmake -C ../cmake/presets/most.cmake -C ../cmake/presets/nolib.cmake -D PKG_GPU=off ../cmake
+   cmake --build . -j4
+
+Benchmarks
+----------
+
+
+Worker iterations run the ``train-*`` benchmark cases below while searching for candidate changes:
+
+.. code-block:: yaml
+
+   cases:
+     - id: train-16r-short
+       weight: 1.0
+       input_script: in.tip4p_nve
+       data_file: water_216_data.lmp
+       mpi_ranks: 16
+       omp_num_threads: 1
+       expected_atoms: 41472
+       run_steps: 1200
+       thermo_every: 100
+       timer_mode: full
+       timestep: 0.5
+       pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+       kspace_style: pppm/tip4p 0.0001
+       neighbor: 2.0 bin
+       pppm_diff_mode: ik
+       replicate:
+         - 4
+         - 4
+         - 4
+     - id: train-32r-short
+       weight: 1.0
+       input_script: in.tip4p_nve
+       data_file: water_216_data.lmp
+       mpi_ranks: 32
+       omp_num_threads: 1
+       expected_atoms: 41472
+       run_steps: 1200
+       thermo_every: 100
+       timer_mode: full
+       timestep: 0.5
+       pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+       kspace_style: pppm/tip4p 0.0001
+       neighbor: 2.0 bin
+       pppm_diff_mode: ik
+       replicate:
+         - 4
+         - 4
+         - 4
+     - id: train-16r-long
+       weight: 1.0
+       input_script: in.tip4p_nve_long
+       data_file: water_216_data.lmp
+       mpi_ranks: 16
+       omp_num_threads: 1
+       expected_atoms: 41472
+       run_steps: 10000
+       thermo_every: 100
+       timer_mode: full
+       timestep: 0.5
+       pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+       kspace_style: pppm/tip4p 0.0001
+       neighbor: 2.0 bin
+       pppm_diff_mode: ik
+       replicate:
+         - 4
+         - 4
+         - 4
+
+Controller reviews run the ``test-*`` benchmark cases below to validate accepted candidates:
+
+.. code-block:: yaml
+
+   cases:
+     - id: test-32r-long
+       weight: 0.5
+       input_script: in.tip4p_nve_long
+       data_file: water_216_data.lmp
+       mpi_ranks: 32
+       omp_num_threads: 1
+       expected_atoms: 41472
+       run_steps: 10000
+       thermo_every: 100
+       timer_mode: full
+       timestep: 0.5
+       pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+       kspace_style: pppm/tip4p 0.0001
+       neighbor: 2.0 bin
+       pppm_diff_mode: ik
+       replicate:
+         - 4
+         - 4
+         - 4
+     - id: test-64r-short
+       weight: 0.25
+       input_script: in.tip4p_nve
+       data_file: water_216_data.lmp
+       mpi_ranks: 64
+       omp_num_threads: 1
+       expected_atoms: 41472
+       run_steps: 1200
+       thermo_every: 100
+       timer_mode: full
+       timestep: 0.5
+       pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+       kspace_style: pppm/tip4p 0.0001
+       neighbor: 2.0 bin
+       pppm_diff_mode: ik
+       replicate:
+         - 4
+         - 4
+         - 4
