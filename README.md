@@ -12,10 +12,14 @@ FermiLink documentation hero page.
 ## Add a new entry
 
 ```bash
-python project-optimization/scripts/add_entry.py \
-    <path-to>/.fermilink-optimize \
-    --package pyscf --task diis-scf
+python project-optimization/scripts/add_entry.py <path-to-project>
 ```
+
+The script accepts either the project root or the `.fermilink-optimize`
+directory itself. By default it infers `<package>` and `<task>` from the
+target repo's current branch, which is expected to look like
+`fermilink-optimize/<package>-<task>`. You can still override either value with
+`--package` and `--task` when needed.
 
 This writes a per-task bundle to
 `project-optimization/source/entries/<package>/<task>/`. Per-package summary

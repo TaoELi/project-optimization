@@ -1,0 +1,25 @@
+{
+  "analysis_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-tip4p/.fermilink-optimize/autogen/goal_analysis.json",
+  "benchmark_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-tip4p/.fermilink-optimize/autogen/benchmark.yaml",
+  "created_at_utc": "2026-04-12T05:47:07.889645Z",
+  "created_files": {
+    "analysis": true,
+    "benchmark": true,
+    "run_script": true,
+    "runner": true,
+    "setup": true,
+    "submit_launcher": true
+  },
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/cpp-lammps-tip4p-water-nve-goal.md",
+  "goal_sha256": "4464acb072e0c70885c225c45d037015e256562f70a021d00576b31990c48c61",
+  "language": "cpp",
+  "mode": "goal",
+  "package_id": "lammps",
+  "project_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-tip4p",
+  "review_notes": "Confirm the benchmark runner executes from the staged input root, because `read_data water_216_data.lmp` is a relative path. Confirm the runner injects `timer full` or equivalent, since the staged input scripts themselves only define thermo output. Because the staged inputs use `units electron`, the standard LAMMPS performance line will report `fs/day` rather than `ns/day`. The provided inputs do not activate `kspace_modify diff ad`, slab correction, triclinic logic, or PPPM per-atom energy/virial interpolation, so those code paths need separate validation only if you intend to optimize or rely on them. The `most.cmake` preset enables the OPENMP package, but the staged inputs do not request `/omp` styles, so with `OMP_NUM_THREADS=1` the intended hot path remains the base editable source files.\nVerify `FERMILINK_GOAL_INPUT_ROOT` points at the staged files intended for authoritative runs; the YAML defaults it to `.fermilink-optimize/inputs/all`, and the runner resolves relative values against the repo root.\n\nVerify the benchmark environment can satisfy `mpirun -np 16`, `32`, and `64`, and that the pre-command produces `build/lmp` at the repo root before runs start.\n\nVerify the correctness force field is acceptable as a deterministic 256-atom evenly spaced sample from the final `write_dump` snapshot rather than a full 41,472-atom force vector, since that keeps runner JSON and artifact size bounded.\n\nVerify injecting `timer full` and the final `write_dump` through a temporary wrapper input is acceptable for your harness; this leaves the staged input scripts unchanged while ensuring the runner can parse full timing-table metrics and sampled final forces.\n\nI syntax-checked the runner with `python3 -m py_compile` and loaded the YAML with PyYAML, but I did not execute the full MPI benchmark in this turn.",
+  "run_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-tip4p/.fermilink-optimize/autogen/run_optimize.sh",
+  "runner_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-tip4p/.fermilink-optimize/autogen/benchmark_runner.py",
+  "schema_version": 1,
+  "setup_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-tip4p/.fermilink-optimize/autogen/setup_env.sh",
+  "submit_launcher_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-tip4p/.fermilink-optimize/autogen/submit_poll_launcher.py"
+}

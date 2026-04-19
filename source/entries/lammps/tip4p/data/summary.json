@@ -1,0 +1,59 @@
+{
+  "metric_label": "Weighted median pair plus kspace time (s)",
+  "direction": "lower",
+  "iterations_total": 40,
+  "accepted": [
+    "3a45586c8afa",
+    "2a0b902a8b5a",
+    "ab55ea3e8508",
+    "2599e1f9f4c8",
+    "4cbc0fa85603",
+    "5840dac0d9f1"
+  ],
+  "rejected": [
+    "0157b0571dbb",
+    "847eb8e5dd4b",
+    "42d987d04a9c",
+    "c37498ebee61",
+    "7d859a5521df",
+    "0356a6e5d35a",
+    "25819367f233",
+    "4f3910700624",
+    "c467f241b716",
+    "b11c640621e4",
+    "48e378f90ae8",
+    "ad7811dc14f3",
+    "b87604e6465e",
+    "57da41d1ad04",
+    "22ab6a7a53b5",
+    "bd8ee0840992",
+    "a4391bb48f95",
+    "757c16f42b32",
+    "aaa3d5fa36f1",
+    "b9d56dcc532a",
+    "9eb54352a2e0",
+    "8bfdf92c40a5",
+    "ff67ca3c0752",
+    "625e91025a03",
+    "44b554c8a168",
+    "d6aa774723cb",
+    "e04c1aedddd3",
+    "095bee6d96dc",
+    "7c4d21219695"
+  ],
+  "correctness_failure": [
+    "2bbd33a175f2",
+    "89aa52c5901e",
+    "1478ab81846a",
+    "b028e7ec4bbc"
+  ],
+  "baseline": {
+    "commit": "e7c0ed95a333",
+    "metric": 94.717
+  },
+  "best": {
+    "commit": "5840dac0d9f1",
+    "metric": 70.984,
+    "pct_vs_baseline": 25.056747996663752
+  }
+}
