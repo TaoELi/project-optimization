@@ -2,6 +2,9 @@ Iteration 0026 — 4cbc0fa85603 (accepted)
 ========================================
 
 
+GitHub commit: `4cbc0fa85603 <iter-0026-page-head-4cbc0fa85603_>`_
+Published branch: `fermilink-optimize/lammps-tip4p <https://github.com/skilled-scipkg/lammps/tree/fermilink-optimize%2Flammps-tip4p>`_
+
 Change summary
 --------------
 
@@ -31,9 +34,9 @@ Guardrails & metrics
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
 | guardrail errors | 0                                                                                                                              |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
-| incumbent commit | 2599e1f9f4c8                                                                                                                   |
+| incumbent commit | `2599e1f9f4c8 <iter-0026-guardrails-incumbent-2599e1f9f4c8bb574886ac80f8e67052265a0ad4_>`_                                     |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
-| candidate commit | 4cbc0fa85603                                                                                                                   |
+| candidate commit | `4cbc0fa85603 <iter-0026-guardrails-candidate-4cbc0fa856036c692930cd76775c671201e183cc_>`_                                     |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
 | incumbent metric | 76.248                                                                                                                         |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
@@ -641,3 +644,8 @@ Diff
       void find_M_cached(int, int &, int &, double *&);
       void find_M(int, int &, int &, double *);
     };
+
+
+.. _iter-0026-page-head-4cbc0fa85603: https://github.com/skilled-scipkg/lammps/commit/4cbc0fa85603
+.. _iter-0026-guardrails-incumbent-2599e1f9f4c8bb574886ac80f8e67052265a0ad4: https://github.com/skilled-scipkg/lammps/commit/2599e1f9f4c8bb574886ac80f8e67052265a0ad4
+.. _iter-0026-guardrails-candidate-4cbc0fa856036c692930cd76775c671201e183cc: https://github.com/skilled-scipkg/lammps/commit/4cbc0fa856036c692930cd76775c671201e183cc

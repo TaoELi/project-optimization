@@ -2,6 +2,9 @@ Iteration 0027 — 5840dac0d9f1 (accepted)
 ========================================
 
 
+GitHub commit: `5840dac0d9f1 <iter-0027-page-head-5840dac0d9f1_>`_
+Published branch: `fermilink-optimize/lammps-tip4p <https://github.com/skilled-scipkg/lammps/tree/fermilink-optimize%2Flammps-tip4p>`_
+
 Change summary
 --------------
 
@@ -31,9 +34,9 @@ Guardrails & metrics
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
 | guardrail errors | 0                                                                                                                              |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
-| incumbent commit | 4cbc0fa85603                                                                                                                   |
+| incumbent commit | `4cbc0fa85603 <iter-0027-guardrails-incumbent-4cbc0fa856036c692930cd76775c671201e183cc_>`_                                     |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
-| candidate commit | 5840dac0d9f1                                                                                                                   |
+| candidate commit | `5840dac0d9f1 <iter-0027-guardrails-candidate-5840dac0d9f14f3d7eb7d862f91d66ae209efef3_>`_                                     |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
 | incumbent metric | 72.919                                                                                                                         |
 +------------------+--------------------------------------------------------------------------------------------------------------------------------+
@@ -201,3 +204,8 @@ Diff
       void find_M(int, int &, int &, double *);
     };
     
+
+
+.. _iter-0027-page-head-5840dac0d9f1: https://github.com/skilled-scipkg/lammps/commit/5840dac0d9f1
+.. _iter-0027-guardrails-incumbent-4cbc0fa856036c692930cd76775c671201e183cc: https://github.com/skilled-scipkg/lammps/commit/4cbc0fa856036c692930cd76775c671201e183cc
+.. _iter-0027-guardrails-candidate-5840dac0d9f14f3d7eb7d862f91d66ae209efef3: https://github.com/skilled-scipkg/lammps/commit/5840dac0d9f14f3d7eb7d862f91d66ae209efef3
