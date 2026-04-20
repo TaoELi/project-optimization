@@ -3,7 +3,24 @@
 {% block content %}
   {% if pagename == "index" %}
     <script>
+      // Force dark (night) mode only on the hero/index page. Furo keys
+      // its light/dark CSS off `body[data-theme="..."]` and reads
+      // `localStorage.getItem("theme")` in an inline head script to set
+      // that attribute on page load. We override that here *without*
+      // writing to localStorage, so other pages keep the user's chosen
+      // light/dark/auto preference. A MutationObserver re-pins `dark`
+      // in case Furo's own theme toggle (still present in the DOM even
+      // though the landing shell replaces the chrome) flips it back.
+      document.body.dataset.theme = "dark";
       document.body.classList.add("mxl-landing", "mxl-landing-simple");
+      (function () {
+        var obs = new MutationObserver(function () {
+          if (document.body.dataset.theme !== "dark") {
+            document.body.dataset.theme = "dark";
+          }
+        });
+        obs.observe(document.body, { attributes: true, attributeFilter: ["data-theme"] });
+      })();
     </script>
     <a class="mxl-skip-link" href="#po-main">Skip to content</a>
 
@@ -22,7 +39,6 @@
         <nav class="mxl-simple-nav" aria-label="Site links">
           <a href="https://fermilink.org">Main docs</a>
           <a href="#po-packages">Runs</a>
-          <a href="#po-add">Add a run</a>
           <a href="https://fermilink.org/optimize.html">How optimize works</a>
         </nav>
       </header>
@@ -37,12 +53,10 @@
             </p>
             <h1>
               Watch <code style="background:rgba(106,214,255,0.15);border-radius:6px;padding:0.1em 0.35em;font-family:var(--mxl-code-font);">fermilink optimize</code>
-              <br/>make real code faster.
+              <br/>make scientific code faster.
             </h1>
             <p class="mxl-simple-lead">
-              Every entry below is a self-contained report bundle &mdash; trajectory plots,
-              guardrail metrics, accepted-commit diffs, and the benchmark contract &mdash;
-              exported directly from a live <b>FermiLink</b> optimize run.
+              Stored records of optimization runs on real scientific codebases using <b>FermiLink</b>.
             </p>
             <div class="mxl-simple-actions">
               <a class="mxl-simple-btn mxl-simple-btn--primary" href="#po-packages">
@@ -52,7 +66,6 @@
                 </svg>
               </a>
               <a class="mxl-simple-btn" href="https://fermilink.org/optimize.html">How optimize works</a>
-              <a class="mxl-simple-btn" href="#po-add">Contribute a run</a>
             </div>
           </section>
 
@@ -117,8 +130,8 @@
               </div>
             </div>
             <p class="po-cartoon-caption">
-              Write a <code>goal.md</code>. FermiLink iterates on the code, benchmarks each
-              change under your contract, and keeps only the winners.
+              Write a <code>goal.md</code>. <b>FermiLink</b> iterately modifies the hotpath and optimizes the code performance, 
+              guided by deterministic benchmarks.
             </p>
           </section>
 
@@ -145,38 +158,6 @@
               <code>source/entries/&lt;package&gt;/&lt;task&gt;/</code>.
             </p>
             {% endif %}
-          </section>
-
-          {# ── Add a run ── #}
-          <section id="po-add" class="mxl-how-section">
-            <h2 class="mxl-section-title">Add a new run in 3 steps</h2>
-            <div class="mxl-how-steps">
-              <div class="mxl-how-step">
-                <div class="mxl-how-num">1</div>
-                <h3>Run optimize</h3>
-                <p><code style="color:var(--mxl-simple-accent);font-family:var(--mxl-code-font);">fermilink optimize goal.md</code></p>
-              </div>
-              <div class="mxl-how-connector">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-              </div>
-              <div class="mxl-how-step">
-                <div class="mxl-how-num">2</div>
-                <h3>Drop the bundle</h3>
-                <p><code style="color:var(--mxl-simple-accent);font-family:var(--mxl-code-font);font-size:0.82rem;">scripts/add_entry.py &hellip;</code></p>
-              </div>
-              <div class="mxl-how-connector">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-              </div>
-              <div class="mxl-how-step">
-                <div class="mxl-how-num">3</div>
-                <h3>Rebuild</h3>
-                <p><code style="color:var(--mxl-simple-accent);font-family:var(--mxl-code-font);">make doc</code></p>
-              </div>
-            </div>
-            <p style="margin-top:1.6rem;font-size:0.9rem;color:var(--mxl-simple-muted);">
-              See the repository <code>README.md</code> in
-              <code>project-optimization/</code> for the full command.
-            </p>
           </section>
 
           {# ── Footer ── #}
