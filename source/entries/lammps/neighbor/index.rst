@@ -4,6 +4,83 @@ Optimization Report — lammps-neighbor
 
 Primary metric: ``Weighted median neigh time (s)`` (lower is better).
 
+Goal
+----
+
+
+Copied source goal for this optimization: :download:`goal.md <contract/goal.md>`
+
+.. code-block:: markdown
+
+   # Optimization Goal
+   
+   ## Package
+   lammps
+   
+   ## Language
+   cpp
+   
+   ## Target
+   Optimize the neighbor-list construction hot path of the TIP4P long-range water NVE workflow in LAMMPS, with primary focus on rebuild-time binning and pair-list generation for the `neighbor 2.0 bin` configuration used by the benchmark inputs.
+   
+   In `src/verlet.cpp`, the TIP4P NVE loop calls `neighbor->decide()` every step and `neighbor->build(1)` whenever reneighboring is required. For this input deck, the relevant hot paths are `src/neighbor.cpp` and `src/npair_bin.cpp`: `Neighbor::build()` stores the displacement reference state, bins all local and ghost atoms, builds the perpetual pair lists, and rebuilds topology lists, while `NPairBin::build()` loops over owned atoms and bin stencils, evaluates cutoffs and exclusions, and emits the neighbor lists consumed by the pair style.
+   
+   Primary optimization interest is reducing neighbor rebuild cost for the fixed-size water systems while preserving the same list completeness, rebuild safety, special-neighbor handling, and stable NVE behavior.
+   
+   This goal assumes benchmark generation will use the attached input artifacts by filename (`water_216_data.lmp`, `in.tip4p_nve`, and `in.tip4p_nve_long`) and resolve them from the staged goal input root.
+   
+   ## Editable Scope
+   - src/neighbor.cpp
+   - src/neighbor.h
+   - src/npair_bin.cpp
+   - src/npair_bin.h
+   
+   ## Performance Metric
+   Minimize weighted median `neigh_seconds` across all benchmark cases.
+   
+   Benchmark should also record `loop_seconds`, `neigh_seconds`, `pair_seconds`, `kspace_seconds`, `comm_seconds`, `bond_seconds`, and normalized throughput (for example, steps/second or ns/day). Secondary objective should be lower `loop_seconds` without winning by skipping required rebuilds or weakening list safety.
+   
+   ## Correctness Constraints
+   - Preserve NVE energy behavior: total energy drift per atom per step over the longer runs must stay within benchmark tolerance versus incumbent baseline.
+   - Preserve sampled thermo observables at matched output steps: `etotal`, `pe`, `ke`, `temp`, `press`, and `density` must stay within benchmark tolerance.
+   - Preserve sampled force consistency for representative frames: RMS and max absolute force-component deltas must stay within benchmark tolerance.
+   - Preserve neighbor semantics exactly: same pair-list completeness, same special-neighbor encoding and exclusion behavior, same topology-list correctness for bonds and angles, and no dangerous builds or out-of-range atoms introduced by the optimization.
+   - Do not change physical model semantics or runtime controls to gain speed: keep `pair_style lj/cut/tip4p/long`, `kspace_style pppm/tip4p 0.0001`, `neighbor 2.0 bin`, default rebuild-safety behavior, `timestep 0.5`, units, and TIP4P geometry assumptions unchanged.
+   - Do not weaken distance checks, ghost coverage, or rebuild cadence safety to gain speed.
+   - All benchmark cases must complete successfully with deterministic runner settings.
+   
+   ## Representative Workloads
+   - train-16r-long: `in.tip4p_nve_long` + `water_216_data.lmp` on 16 MPI ranks, giving a longer run with repeated neighbor rebuild opportunities and lower communication noise.
+   - train-32r-long: `in.tip4p_nve_long` + `water_216_data.lmp` on 32 MPI ranks to keep the optimization useful across a second domain decomposition.
+   - train-32r-short: `in.tip4p_nve` + `water_216_data.lmp` on 32 MPI ranks as a shorter-turnaround rebuild case.
+   - test-16r-short: `in.tip4p_nve` + `water_216_data.lmp` on 16 MPI ranks as a held-out lower-rank case.
+   - test-64r-short: `in.tip4p_nve` + `water_216_data.lmp` on 64 MPI ranks as a held-out scaling-sensitive case where neighbor and communication interact more strongly.
+   
+   ## Build
+   ```bash
+   mkdir -p build
+   cd build
+   cmake -C ../cmake/presets/most.cmake -C ../cmake/presets/nolib.cmake -D PKG_GPU=off ../cmake
+   cmake --build . -j4
+   ```
+   
+   ## Notes
+   - Treat the attached LAMMPS input file(s) as the source of truth for runtime settings and any include-chain files.
+   - This campaign is intended to find algorithm-level improvements inside `src/neighbor.*` and `src/npair_bin.*`, not generic pair, PPPM, communication, or bonded-kernel tuning.
+   - Keep benchmark execution deterministic: fixed thread settings, fixed random seeds (if any), and explicit launch command.
+   - Run LAMMPS with full timer output so the benchmark runner can parse `Neigh`, `Pair`, `Kspace`, `Comm`, `Bond`, and total loop timings from the standard timing table.
+   - In generated benchmark YAML, include `runtime.pre_commands` derived from the build section so authoritative runs rebuild the edited LAMMPS binary before benchmarking.
+   - In generated benchmark runtime command, invoke LAMMPS via MPI launcher with the case-specific rank count (16, 32, or 64), not one fixed rank count for every case.
+   - Set `OMP_NUM_THREADS=1` unless a case explicitly requires hybrid MPI+OpenMP, and keep this setting identical across baseline/candidate runs.
+   - In generated benchmark YAML, include a split block so worker sees the train cases only:
+     ```yaml
+     split:
+       train_case_ids:
+         - train-16r-long
+         - train-32r-long
+         - train-32r-short
+     ```
+
 Summary
 -------
 
@@ -34,59 +111,59 @@ All iterations
 +======+=================================================+===================+=========+========================================================================================================+
 | 0    | `e7c0ed95a333 <iter-0000-table-e7c0ed95a333_>`_ | baseline          | 0.36158 | baseline                                                                                               |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 1    | `2d1eda35b944 <iter-0001-table-2d1eda35b944_>`_ | rejected          | 0.47712 | Split the orthogonal half-bin/newton self-bin traversal in \`npair_bin.cpp\` and cache per-atom cut…   |
+| 1    | 2d1eda35b944                                    | rejected          | 0.47712 | Split the orthogonal half-bin/newton self-bin traversal in \`npair_bin.cpp\` and cache per-atom cut…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
 | 2    | `32b495fdb66b <iter-0002-table-32b495fdb66b_>`_ | accepted          | 0.33535 | Specialize the orthogonal half/bin/newton neighbor build in \`src/npair_bin.cpp\` to remove generic…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
 | 3    | `380bf2b0146b <iter-0003-table-380bf2b0146b_>`_ | accepted          | 0.32842 | Add a benchmark-specific fast path in \`NPairBin<1,1,0,0,0>::build()\` for standard molecular syste…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 4    | `3bd7cbc7ee03 <iter-0004-table-3bd7cbc7ee03_>`_ | rejected          | 0.32287 | Skip \`find_special()\` and \`minimum_image_check()\` for different-molecule pairs inside the incumbe… |
+| 4    | 3bd7cbc7ee03                                    | rejected          | 0.32287 | Skip \`find_special()\` and \`minimum_image_check()\` for different-molecule pairs inside the incumbe… |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 5    | `1a1935b59c00 <iter-0005-table-1a1935b59c00_>`_ | rejected          | 0.32384 | Add a \`maxspecial <= 2\` molecular/no-exclusion fast path in \`NPairBin<1,1,0,0,0>::build()\` that b… |
+| 5    | 1a1935b59c00                                    | rejected          | 0.32384 | Add a \`maxspecial <= 2\` molecular/no-exclusion fast path in \`NPairBin<1,1,0,0,0>::build()\` that b… |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
 | 6    | `c4128d3970b2 <iter-0006-table-c4128d3970b2_>`_ | accepted          | 0.31969 | Refine the incumbent \`NPairBin<1,1,0,0,0>::build()\` fast path by early-accepting different-molecu…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 7    | `d89e6f820474 <iter-0007-table-d89e6f820474_>`_ | rejected          | 0.32426 | Replace the remaining same-molecule \`find_special()\` scan in the incumbent \`NPairBin<1,1,0,0,0>::…  |
+| 7    | d89e6f820474                                    | rejected          | 0.32426 | Replace the remaining same-molecule \`find_special()\` scan in the incumbent \`NPairBin<1,1,0,0,0>::…  |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 8    | `d381c38751ec <iter-0008-table-d381c38751ec_>`_ | rejected          | 0.33329 | Split the benchmark-hot molecular/no-exclusion neighbor build into encoded-special and generic va…     |
+| 8    | d381c38751ec                                    | rejected          | 0.33329 | Split the benchmark-hot molecular/no-exclusion neighbor build into encoded-special and generic va…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 9    | `2894990122f9 <iter-0009-table-2894990122f9_>`_ | rejected          | 0.3187  | Cache per-neighbor ownership/tag/molecule values and use an encoded-only special lookup inside th…     |
+| 9    | 2894990122f9                                    | rejected          | 0.3187  | Cache per-neighbor ownership/tag/molecule values and use an encoded-only special lookup inside th…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 10   | `b21ee6319e89 <iter-0010-table-b21ee6319e89_>`_ | rejected          | 0.3221  | Split the incumbent molecular/no-exclusion self-bin walk in \`NPairBin<1,1,0,0,0>::build()\` into o…   |
+| 10   | b21ee6319e89                                    | rejected          | 0.3221  | Split the incumbent molecular/no-exclusion self-bin walk in \`NPairBin<1,1,0,0,0>::build()\` into o…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
 | 11   | `8c29b124a2c6 <iter-0011-table-8c29b124a2c6_>`_ | accepted          | 0.3115  | Use contiguous \`_noalias\` aliases for hot coordinate/type/tag/molecule arrays in the incumbent \`N…  |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 12   | `e5d6d4548fe4 <iter-0012-table-e5d6d4548fe4_>`_ | rejected          | 0.31003 | Extend the incumbent \`NPairBin<1,1,0,0,0>::build()\` hot path with additional neighbor-array alias…   |
+| 12   | e5d6d4548fe4                                    | rejected          | 0.31003 | Extend the incumbent \`NPairBin<1,1,0,0,0>::build()\` hot path with additional neighbor-array alias…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 13   | `7adf3bfc72a8 <iter-0013-table-7adf3bfc72a8_>`_ | rejected          | 0.31711 | Replace the incumbent molecular/no-exclusion \`NPairBin<1,1,0,0,0>::build()\` special handling with…   |
+| 13   | 7adf3bfc72a8                                    | rejected          | 0.31711 | Replace the incumbent molecular/no-exclusion \`NPairBin<1,1,0,0,0>::build()\` special handling with…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 14   | `e536920bfbe5 <iter-0014-table-e536920bfbe5_>`_ | rejected          | 0.30666 | Add explicit \`jnext\` traversal and light next-neighbor coordinate prefetching to the incumbent \`N…  |
+| 14   | e536920bfbe5                                    | rejected          | 0.30666 | Add explicit \`jnext\` traversal and light next-neighbor coordinate prefetching to the incumbent \`N…  |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 15   | `e5eef089d2d0 <iter-0015-table-e5eef089d2d0_>`_ | rejected          | 0.30618 | Combine explicit jnext traversal and next-neighbor coordinate prefetching with cached periodic ha…     |
+| 15   | e5eef089d2d0                                    | rejected          | 0.30618 | Combine explicit jnext traversal and next-neighbor coordinate prefetching with cached periodic ha…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 16   | `d5b0238dc967 <iter-0016-table-d5b0238dc967_>`_ | rejected          | 0.30551 | Refine the single-path molecular half/bin/newton builder in src/npair_bin.cpp with explicit jnext…     |
+| 16   | d5b0238dc967                                    | rejected          | 0.30551 | Refine the single-path molecular half/bin/newton builder in src/npair_bin.cpp with explicit jnext…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 17   | `4a9dda87cf45 <iter-0017-table-4a9dda87cf45_>`_ | rejected          | 0.30695 | Combine iteration-16 style \`NPairBin<1,1,0,0,0>\` jnext/prefetch/half-box fast-path refinements wi…   |
+| 17   | 4a9dda87cf45                                    | rejected          | 0.30695 | Combine iteration-16 style \`NPairBin<1,1,0,0,0>\` jnext/prefetch/half-box fast-path refinements wi…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
 | 18   | `08f5ab4a4e02 <iter-0018-table-08f5ab4a4e02_>`_ | accepted          | 0.29094 | Use explicit \`jnext\` linked-list traversal with bin/list \`_noalias\` aliases and delayed generic-o… |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
 | 19   | `11db74893452 <iter-0019-table-11db74893452_>`_ | accepted          | 0.28487 | Optimize Neighbor movement tracking by scanning contiguous x/xhold arrays in check_distance() and…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 20   | `11db74893452 <iter-0020-table-11db74893452_>`_ | worker_incomplete | nan     | optimize iteration 20                                                                                  |
+| 20   | 11db74893452                                    | worker_incomplete | nan     | optimize iteration 20                                                                                  |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 21   | `e35c58b86e07 <iter-0021-table-e35c58b86e07_>`_ | rejected          | 0.28995 | Widen Neighbor::check_distance() to 8-atom unrolled blocks and compare one blockwise max displace…     |
+| 21   | e35c58b86e07                                    | rejected          | 0.28995 | Widen Neighbor::check_distance() to 8-atom unrolled blocks and compare one blockwise max displace…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 22   | `708f9b2d16b1 <iter-0022-table-708f9b2d16b1_>`_ | rejected          | 0.28503 | Specialize the incumbent \`NPairBin<1,1,0,0,0>::build()\` fast path for all-zero special-bond weigh…   |
+| 22   | 708f9b2d16b1                                    | rejected          | 0.28503 | Specialize the incumbent \`NPairBin<1,1,0,0,0>::build()\` fast path for all-zero special-bond weigh…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 23   | `a3f1052997d8 <iter-0023-table-a3f1052997d8_>`_ | rejected          | 0.28469 | Add a runtime uniform-cutoff fast path to the specialized \`NPairBin<1,1,0,0,0>\` molecular/no-excl…   |
+| 23   | a3f1052997d8                                    | rejected          | 0.28469 | Add a runtime uniform-cutoff fast path to the specialized \`NPairBin<1,1,0,0,0>\` molecular/no-excl…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 24   | `84babbbb36e3 <iter-0024-table-84babbbb36e3_>`_ | rejected          | 0.49372 | Add an axis-aligned early reject in the specialized \`NPairBin<1,1,0,0,0>\` fast path so pairs exce…   |
+| 24   | 84babbbb36e3                                    | rejected          | 0.49372 | Add an axis-aligned early reject in the specialized \`NPairBin<1,1,0,0,0>\` fast path so pairs exce…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 25   | `b78acabc90a5 <iter-0025-table-b78acabc90a5_>`_ | rejected          | 0.28592 | Isolate the iteration-23 Neighbor cadence fast-check by caching the benchmark-common every=1/dela…     |
+| 25   | b78acabc90a5                                    | rejected          | 0.28592 | Isolate the iteration-23 Neighbor cadence fast-check by caching the benchmark-common every=1/dela…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 26   | `ba18979d7807 <iter-0026-table-ba18979d7807_>`_ | rejected          | 0.28444 | Add a benchmark-common \`NPairBin<1,1,0,0,0>\` fast path for the uniform-cutoff plus all-special-en…   |
+| 26   | ba18979d7807                                    | rejected          | 0.28444 | Add a benchmark-common \`NPairBin<1,1,0,0,0>\` fast path for the uniform-cutoff plus all-special-en…   |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
-| 27   | `321fb756a836 <iter-0027-table-321fb756a836_>`_ | rejected          | 0.28559 | Cache j-side neighbor coords/tag/molecule once and inline orthogonal half-box minimum-image check…     |
+| 27   | 321fb756a836                                    | rejected          | 0.28559 | Cache j-side neighbor coords/tag/molecule once and inline orthogonal half-box minimum-image check…     |
 +------+-------------------------------------------------+-------------------+---------+--------------------------------------------------------------------------------------------------------+
 
 Accepted Commits
