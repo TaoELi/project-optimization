@@ -1,0 +1,55 @@
+diff --git a/src/npair_bin.cpp b/src/npair_bin.cpp
+index bd1fc1d338..42917b2dda 100644
+--- a/src/npair_bin.cpp
++++ b/src/npair_bin.cpp
+@@ -70,12 +70,16 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+   ipage->reset();
+ 
+   if (!exclude && molecular == Atom::MOLECULAR) {
++    const bool all_special_encoded =
++      (special_flag[1] == 2) && (special_flag[2] == 2) && (special_flag[3] == 2);
++
+     for (i = 0; i < nlocal; i++) {
+       n = 0;
+       neighptr = ipage->vget();
+ 
+       itype = type[i];
+       const double *const cutneighsq_i = cutneighsq[itype];
++      const tagint molecule_i = molecule[i];
+       const tagint *const special_i = special[i];
+       const int *const nspecial_i = nspecial[i];
+       xtmp = x[i][0];
+@@ -102,10 +106,16 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+         rsq = delx * delx + dely * dely + delz * delz;
+ 
+         if (rsq > cutneighsq_i[jtype]) continue;
++        if (molecule_i != molecule[j]) {
++          neighptr[n++] = j;
++          continue;
++        }
+ 
+         which = find_special(special_i, nspecial_i, tag[j]);
+         if (which == 0)
+           neighptr[n++] = j;
++        else if (all_special_encoded && (j < nlocal))
++          neighptr[n++] = j ^ (which << SBBITS);
+         else if (domain->minimum_image_check(delx, dely, delz))
+           neighptr[n++] = j;
+         else if (which > 0)
+@@ -123,10 +133,16 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+           rsq = delx * delx + dely * dely + delz * delz;
+ 
+           if (rsq > cutneighsq_i[jtype]) continue;
++          if (molecule_i != molecule[j]) {
++            neighptr[n++] = j;
++            continue;
++          }
+ 
+           which = find_special(special_i, nspecial_i, tag[j]);
+           if (which == 0)
+             neighptr[n++] = j;
++          else if (all_special_encoded && (j < nlocal))
++            neighptr[n++] = j ^ (which << SBBITS);
+           else if (domain->minimum_image_check(delx, dely, delz))
+             neighptr[n++] = j;
+           else if (which > 0)

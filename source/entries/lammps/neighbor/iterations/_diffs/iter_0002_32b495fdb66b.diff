@@ -1,0 +1,176 @@
+diff --git a/src/npair_bin.cpp b/src/npair_bin.cpp
+index 9c3cbe8e91..490bb45169 100644
+--- a/src/npair_bin.cpp
++++ b/src/npair_bin.cpp
+@@ -33,6 +33,171 @@ using namespace NeighConst;
+ template<int HALF, int NEWTON, int TRI, int SIZE, int ATOMONLY>
+ NPairBin<HALF, NEWTON, TRI, SIZE, ATOMONLY>::NPairBin(LAMMPS *lmp) : NPair(lmp) {}
+ 
++/* ----------------------------------------------------------------------
++   Specialized orthogonal half/newton/non-size build path.
++   This is the benchmark-hot variant, so keep it free of the generic
++   SIZE/ATOMONLY/TRI branches that the other template instances need.
++------------------------------------------------------------------------- */
++
++template<>
++void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
++{
++  int i, j, k, n, itype, jtype, which, ibin;
++  int *neighptr;
++  double xtmp, ytmp, ztmp, delx, dely, delz, rsq;
++
++  double **x = atom->x;
++  int *type = atom->type;
++  int *mask = atom->mask;
++  tagint *tag = atom->tag;
++  tagint *molecule = atom->molecule;
++  tagint **special = atom->special;
++  int **nspecial = atom->nspecial;
++  int nlocal = atom->nlocal;
++  if (includegroup) nlocal = atom->nfirst;
++
++  const bool moltemplate = (molecular == Atom::TEMPLATE);
++  int *molindex = atom->molindex;
++  int *molatom = atom->molatom;
++  Molecule **onemols = atom->avec->onemols;
++
++  int *ilist = list->ilist;
++  int *numneigh = list->numneigh;
++  int **firstneigh = list->firstneigh;
++  MyPage<int> *ipage = list->ipage;
++
++  int inum = 0;
++  ipage->reset();
++
++  for (i = 0; i < nlocal; i++) {
++    n = 0;
++    neighptr = ipage->vget();
++
++    itype = type[i];
++    const double *const cutneighsq_i = cutneighsq[itype];
++    xtmp = x[i][0];
++    ytmp = x[i][1];
++    ztmp = x[i][2];
++
++    const tagint *special_i = nullptr;
++    const int *nspecial_i = nullptr;
++    tagint tagoffset = 0;
++    if (moltemplate) {
++      const int imol = molindex[i];
++      const int iatom = molatom[i];
++      if ((imol >= 0) && onemols[imol]->special) {
++        special_i = onemols[imol]->special[iatom];
++        nspecial_i = onemols[imol]->nspecial[iatom];
++        tagoffset = tag[i] - iatom - 1;
++      }
++    } else if (molecular != Atom::ATOMIC) {
++      special_i = special[i];
++      nspecial_i = nspecial[i];
++    }
++
++    ibin = atom2bin[i];
++
++    if (special_i) {
++      for (j = bins[i]; j >= 0; j = bins[j]) {
++        const double *const xj = x[j];
++        if (j >= nlocal) {
++          if (xj[2] < ztmp) continue;
++          if (xj[2] == ztmp) {
++            if (xj[1] < ytmp) continue;
++            if ((xj[1] == ytmp) && (xj[0] < xtmp)) continue;
++          }
++        }
++
++        jtype = type[j];
++        if (exclude && exclusion(i, j, itype, jtype, mask, molecule)) continue;
++
++        delx = xtmp - xj[0];
++        dely = ytmp - xj[1];
++        delz = ztmp - xj[2];
++        rsq = delx * delx + dely * dely + delz * delz;
++
++        if (rsq > cutneighsq_i[jtype]) continue;
++
++        which = find_special(special_i, nspecial_i, tag[j] - tagoffset);
++        if (which == 0)
++          neighptr[n++] = j;
++        else if (domain->minimum_image_check(delx, dely, delz))
++          neighptr[n++] = j;
++        else if (which > 0)
++          neighptr[n++] = j ^ (which << SBBITS);
++      }
++
++      for (k = 1; k < nstencil; k++) {
++        for (j = binhead[ibin + stencil[k]]; j >= 0; j = bins[j]) {
++          const double *const xj = x[j];
++          jtype = type[j];
++          if (exclude && exclusion(i, j, itype, jtype, mask, molecule)) continue;
++
++          delx = xtmp - xj[0];
++          dely = ytmp - xj[1];
++          delz = ztmp - xj[2];
++          rsq = delx * delx + dely * dely + delz * delz;
++
++          if (rsq > cutneighsq_i[jtype]) continue;
++
++          which = find_special(special_i, nspecial_i, tag[j] - tagoffset);
++          if (which == 0)
++            neighptr[n++] = j;
++          else if (domain->minimum_image_check(delx, dely, delz))
++            neighptr[n++] = j;
++          else if (which > 0)
++            neighptr[n++] = j ^ (which << SBBITS);
++        }
++      }
++
++    } else {
++      for (j = bins[i]; j >= 0; j = bins[j]) {
++        const double *const xj = x[j];
++        if (j >= nlocal) {
++          if (xj[2] < ztmp) continue;
++          if (xj[2] == ztmp) {
++            if (xj[1] < ytmp) continue;
++            if ((xj[1] == ytmp) && (xj[0] < xtmp)) continue;
++          }
++        }
++
++        jtype = type[j];
++        if (exclude && exclusion(i, j, itype, jtype, mask, molecule)) continue;
++
++        delx = xtmp - xj[0];
++        dely = ytmp - xj[1];
++        delz = ztmp - xj[2];
++        rsq = delx * delx + dely * dely + delz * delz;
++
++        if (rsq <= cutneighsq_i[jtype]) neighptr[n++] = j;
++      }
++
++      for (k = 1; k < nstencil; k++) {
++        for (j = binhead[ibin + stencil[k]]; j >= 0; j = bins[j]) {
++          const double *const xj = x[j];
++          jtype = type[j];
++          if (exclude && exclusion(i, j, itype, jtype, mask, molecule)) continue;
++
++          delx = xtmp - xj[0];
++          dely = ytmp - xj[1];
++          delz = ztmp - xj[2];
++          rsq = delx * delx + dely * dely + delz * delz;
++
++          if (rsq <= cutneighsq_i[jtype]) neighptr[n++] = j;
++        }
++      }
++    }
++
++    ilist[inum++] = i;
++    firstneigh[i] = neighptr;
++    numneigh[i] = n;
++    ipage->vgot(n);
++    if (ipage->status()) error->one(FLERR, Error::NOLASTLINE, "Neighbor list overflow, boost neigh_modify one" + utils::errorurl(36));
++  }
++
++  list->inum = inum;
++}
++
+ /* ----------------------------------------------------------------------
+    Full:
+      binned neighbor list construction for all neighbors

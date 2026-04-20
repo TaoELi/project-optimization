@@ -1,0 +1,25 @@
+{
+  "analysis_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-neighbor/.fermilink-optimize/autogen/goal_analysis.json",
+  "benchmark_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-neighbor/.fermilink-optimize/autogen/benchmark.yaml",
+  "created_at_utc": "2026-04-12T06:00:58.981798Z",
+  "created_files": {
+    "analysis": true,
+    "benchmark": true,
+    "run_script": true,
+    "runner": true,
+    "setup": true,
+    "submit_launcher": true
+  },
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/cpp-lammps-tip4p-water-nve-neighbor-goal.md",
+  "goal_sha256": "49d38116530db90cde37e2889bcbda82403bd0206ceccc77598709b8a8b4d1fa",
+  "language": "cpp",
+  "mode": "goal",
+  "package_id": "lammps",
+  "project_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-neighbor",
+  "review_notes": "1. I inferred the runtime launcher as a generic MPI launcher placeholder; if the benchmark environment requires `srun` or `mpiexec` instead of `mpirun`, substitute that in the command template.\n2. The staged data file already contains 216 waters (648 atoms). After the scripted `replicate 4 4 4`, the benchmark actually runs 13,824 waters / 41,472 atoms; please confirm that this expanded system size is the intended fixed-size target.\n3. There is no repo-local test that exactly matches the staged NVE benchmark scripts. The closest correctness references are the TIP4P force-style YAML fixtures and molecular example inputs, so benchmark tolerances should be reviewed by the user before being treated as authoritative.\n1. The runner currently enforces thermo observables plus `neighbor_list_builds` and `dangerous_builds`; force-component checks are not encoded because the staged TIP4P scripts do not emit force dumps.\n2. The YAML defaults `FERMILINK_GOAL_INPUT_ROOT` to `.fermilink-optimize/inputs/all`, but the runner will honor a real environment override first. Verify the controller sets this to the staged root it actually provides, especially for worker-only runs.\n3. MPI launcher autodetection prefers `mpirun`, then `mpiexec`, then `srun`. If the cluster needs a different launcher or extra flags, set `FERMILINK_MPI_LAUNCHER` explicitly.\n4. I validated YAML loading and Python syntax, and I executed the runner once; it failed cleanly only because `build/lmp` does not exist yet. The `runtime.pre_commands` are expected to satisfy that before authoritative benchmarking.",
+  "run_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-neighbor/.fermilink-optimize/autogen/run_optimize.sh",
+  "runner_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-neighbor/.fermilink-optimize/autogen/benchmark_runner.py",
+  "schema_version": 1,
+  "setup_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-neighbor/.fermilink-optimize/autogen/setup_env.sh",
+  "submit_launcher_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-neighbor/.fermilink-optimize/autogen/submit_poll_launcher.py"
+}

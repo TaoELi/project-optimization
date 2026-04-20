@@ -1,0 +1,389 @@
+{
+  "build_system": {
+    "build_command": "mkdir -p build && cd build && cmake -C ../cmake/presets/most.cmake -C ../cmake/presets/nolib.cmake -D PKG_GPU=off ../cmake && cmake --build . -j4",
+    "install_command": "cd build && cmake --install .",
+    "type": "cmake"
+  },
+  "configuration_parameters": [
+    {
+      "description": "Working directory that contains the staged input script and `water_216_data.lmp`. This matters because the input script uses `read_data water_216_data.lmp` as a relative path.",
+      "example": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps",
+      "name": "goal_input_root",
+      "type": "string"
+    },
+    {
+      "description": "LAMMPS input script passed to `lmp -in ...`; it sets run length, thermo cadence, and all runtime controls for the workload.",
+      "example": "in.tip4p_nve",
+      "name": "input_script",
+      "type": "string"
+    },
+    {
+      "description": "LAMMPS data file read by the workload input before replication. It defines the seed 216-water box, masses, charges, topology, and intramolecular coefficients.",
+      "example": "water_216_data.lmp",
+      "name": "data_file",
+      "type": "string"
+    },
+    {
+      "description": "MPI rank count used to launch `lmp`. The target workload spectrum uses 16, 32, and 64 ranks.",
+      "example": 16,
+      "name": "mpi_ranks",
+      "type": "integer"
+    },
+    {
+      "description": "Simulation unit system from the workload input.",
+      "example": "electron",
+      "name": "units",
+      "type": "string"
+    },
+    {
+      "description": "LAMMPS atom style required by the workload data file.",
+      "example": "full",
+      "name": "atom_style",
+      "type": "string"
+    },
+    {
+      "description": "TIP4P long-range nonbonded model used by the workload.",
+      "example": "lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007",
+      "name": "pair_style",
+      "type": "string"
+    },
+    {
+      "description": "Bond style in scope, registered by `BondStyle(class2,BondClass2)`.",
+      "example": "class2",
+      "name": "bond_style",
+      "type": "string"
+    },
+    {
+      "description": "Angle style in scope, registered by `AngleStyle(harmonic,AngleHarmonic)`.",
+      "example": "harmonic",
+      "name": "angle_style",
+      "type": "string"
+    },
+    {
+      "description": "Per-type class2 bond coefficients from `water_216_data.lmp`: `r0 k2 k3 k4`.",
+      "example": "1 1.78 0.2708585 -0.327738785 0.231328959",
+      "name": "bond_coeffs",
+      "type": "string"
+    },
+    {
+      "description": "Per-type harmonic angle coefficients from `water_216_data.lmp`: `k theta0_degrees`.",
+      "example": "1 0.0700 107.400000",
+      "name": "angle_coeffs",
+      "type": "string"
+    },
+    {
+      "description": "Replication factors applied after `read_data`. The 216-water seed box is replicated to the benchmark system.",
+      "example": [
+        4,
+        4,
+        4
+      ],
+      "name": "replicate",
+      "type": "array"
+    },
+    {
+      "description": "Deterministic seed used by `velocity all create` in both target input scripts.",
+      "example": 123451,
+      "name": "velocity_seed",
+      "type": "integer"
+    },
+    {
+      "description": "Neighbor-list skin and style.",
+      "example": "2.0 bin",
+      "name": "neighbor",
+      "type": "string"
+    },
+    {
+      "description": "Long-range electrostatics style used after bonded forces.",
+      "example": "pppm/tip4p 0.0001",
+      "name": "kspace_style",
+      "type": "string"
+    },
+    {
+      "description": "Integrator timestep from the workload input.",
+      "example": 0.5,
+      "name": "timestep",
+      "type": "number"
+    },
+    {
+      "description": "Thermo fields emitted by the workload input and used for correctness comparisons.",
+      "example": "custom step atoms temp etotal pe ke press density",
+      "name": "thermo_style",
+      "type": "string"
+    },
+    {
+      "description": "Thermo sampling cadence in timesteps.",
+      "example": 100,
+      "name": "thermo_every",
+      "type": "integer"
+    },
+    {
+      "description": "Total MD steps requested by the input script.",
+      "example": 1200,
+      "name": "run_steps",
+      "type": "integer"
+    }
+  ],
+  "editable_paths": [
+    "src/CLASS2/bond_class2.cpp",
+    "src/CLASS2/bond_class2.h",
+    "src/MOLECULE/angle_harmonic.cpp",
+    "src/MOLECULE/angle_harmonic.h"
+  ],
+  "entry_points": [
+    {
+      "call_signature": "int main(int argc, char **argv)",
+      "description": "MPI CLI entry point for the `lmp` executable. It initializes MPI, constructs `LAMMPS(argc, argv, communicator)`, and executes the active input script through `lammps->input->file()`.",
+      "module_or_file": "src/main.cpp",
+      "name": "main"
+    },
+    {
+      "call_signature": "void Verlet::run(int n)",
+      "description": "Primary timestep loop for `run_style verlet`. Each step performs integration, neighbor/ghost communication or rebuild, pair force computation, bonded force computation, PPPM/kspace, reverse communication, and output. The standard `Bond` timer bucket is stamped after bond+angle+dihedral+improper work.",
+      "module_or_file": "src/verlet.cpp",
+      "name": "Verlet::run"
+    },
+    {
+      "call_signature": "void BondClass2::compute(int eflag, int vflag)",
+      "description": "Hot bonded kernel for `bond_style class2`. It walks `neighbor->bondlist` entries `[i1,i2,type]`, computes `r`, `dr = r - r0[type]`, evaluates the class2 polynomial and derivative, updates `atom->f`, and tallies energy/virial via `ev_tally()` when requested.",
+      "module_or_file": "src/CLASS2/bond_class2.cpp",
+      "name": "BondClass2::compute"
+    },
+    {
+      "call_signature": "void AngleHarmonic::compute(int eflag, int vflag)",
+      "description": "Hot bonded kernel for `angle_style harmonic`. It walks `neighbor->anglelist` entries `[i1,i2,i3,type]`, computes the two bond vectors and geometry, clamps cosine into `[-1,1]`, uses `acos(c)` and a guarded `1/sin(theta)` path, updates `atom->f`, and tallies energy/virial.",
+      "module_or_file": "src/MOLECULE/angle_harmonic.cpp",
+      "name": "AngleHarmonic::compute"
+    },
+    {
+      "call_signature": "double BondClass2::single(int type, double rsq, int i, int j, double &fforce)",
+      "description": "Single-interaction API for one class2 bond. Existing unit tests use it to cross-check style-level energy/force consistency against the bulk `compute()` path.",
+      "module_or_file": "src/CLASS2/bond_class2.cpp",
+      "name": "BondClass2::single"
+    },
+    {
+      "call_signature": "double AngleHarmonic::single(int type, int i1, int i2, int i3)",
+      "description": "Single-interaction API for one harmonic angle. Existing unit tests use it as a reference-style evaluator outside the full neighbor-list loop.",
+      "module_or_file": "src/MOLECULE/angle_harmonic.cpp",
+      "name": "AngleHarmonic::single"
+    }
+  ],
+  "immutable_paths": [
+    ".fermilink-optimize/** except .fermilink-optimize/autogen/**",
+    "skills/**",
+    "all repository paths outside the goal editable scope"
+  ],
+  "language": "cpp",
+  "output_quantities": [
+    {
+      "description": "Total energy from `thermo_style custom step atoms temp etotal pe ke press density` at matched output steps.",
+      "field": "etotal",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Derived NVE drift metric computed from sampled total energy over the longer runs.",
+      "field": "etotal_drift_per_atom_per_step",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Potential energy from thermo output at matched output steps.",
+      "field": "pe",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Kinetic energy from thermo output at matched output steps.",
+      "field": "ke",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Temperature from thermo output at matched output steps.",
+      "field": "temp",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Pressure from thermo output at matched output steps.",
+      "field": "press",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-06
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Density from thermo output. For this fixed-volume replicated water deck it should remain effectively invariant.",
+      "field": "density",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-12
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Per-atom force components on representative frames. Compare both RMS and max absolute deltas versus the incumbent baseline.",
+      "field": "force_components",
+      "suggested_tolerance": {
+        "mode": "rms_delta",
+        "value": 1e-08
+      },
+      "type": "array"
+    },
+    {
+      "description": "Optional direct bond-only energy from `compute pe/atom bond` plus `compute reduce sum`, matching the style-level unit-test pattern.",
+      "field": "bond_pe_sum",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-10
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Optional direct angle-only energy from `compute pe/atom angle` plus `compute reduce sum`, matching the style-level unit-test pattern.",
+      "field": "angle_pe_sum",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-10
+      },
+      "type": "scalar"
+    }
+  ],
+  "package": "lammps",
+  "runtime_command_template": [
+    "bash",
+    "-lc",
+    "cd ${goal_input_root} && OMP_NUM_THREADS=1 mpirun -np ${mpi_ranks} ${repo_root}/build/lmp -in ${input_script}"
+  ],
+  "suggested_cases": [
+    {
+      "description": "Short pure-MPI training case on 16 ranks. This is the cleanest place to resolve bonded time against the full loop.",
+      "id": "train-16r-short",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "expected_angles_after_replicate": 13824,
+        "expected_atoms_after_replicate": 41472,
+        "expected_bonds_after_replicate": 27648,
+        "goal_input_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 16,
+        "omp_threads": 1,
+        "replicate": [
+          4,
+          4,
+          4
+        ],
+        "run_steps": 1200
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Short pure-MPI training case on 32 ranks to preserve usefulness across a second domain decomposition.",
+      "id": "train-32r-short",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "expected_angles_after_replicate": 13824,
+        "expected_atoms_after_replicate": 41472,
+        "expected_bonds_after_replicate": 27648,
+        "goal_input_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 32,
+        "omp_threads": 1,
+        "replicate": [
+          4,
+          4,
+          4
+        ],
+        "run_steps": 1200
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Longer-horizon NVE drift and timer-stability training case on 16 ranks.",
+      "id": "train-16r-long",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "expected_angles_after_replicate": 13824,
+        "expected_atoms_after_replicate": 41472,
+        "expected_bonds_after_replicate": 27648,
+        "goal_input_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps",
+        "input_script": "in.tip4p_nve_long",
+        "mpi_ranks": 16,
+        "omp_threads": 1,
+        "replicate": [
+          4,
+          4,
+          4
+        ],
+        "run_steps": 10000
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Held-out long validation case on 32 ranks.",
+      "id": "test-32r-long",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "expected_angles_after_replicate": 13824,
+        "expected_atoms_after_replicate": 41472,
+        "expected_bonds_after_replicate": 27648,
+        "goal_input_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps",
+        "input_script": "in.tip4p_nve_long",
+        "mpi_ranks": 32,
+        "omp_threads": 1,
+        "replicate": [
+          4,
+          4,
+          4
+        ],
+        "run_steps": 10000
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Held-out scaling-sensitive short case on 64 ranks. Useful for regression detection, but it should not define the optimization direction.",
+      "id": "test-64r-short",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "expected_angles_after_replicate": 13824,
+        "expected_atoms_after_replicate": 41472,
+        "expected_bonds_after_replicate": 27648,
+        "goal_input_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 64,
+        "omp_threads": 1,
+        "replicate": [
+          4,
+          4,
+          4
+        ],
+        "run_steps": 1200
+      },
+      "weight": 1.0
+    }
+  ],
+  "threading_model": {
+    "default_threads": 1,
+    "description": "LAMMPS is an MPI program by default when CMake finds MPI (`BUILD_MPI=ON`), otherwise it links MPI stubs. The provided build preset enables the OPENMP package, and unit tests can switch to `/omp` style variants with `-pk omp N -sf omp`, but the goal input explicitly names the base styles `class2` and `harmonic`. For this optimization campaign, the intended mode is pure MPI with `OMP_NUM_THREADS=1`, fixed rank count per case, and no `-sf omp`, so the executable runs the base kernels in `src/CLASS2/bond_class2.cpp` and `src/MOLECULE/angle_harmonic.cpp`.",
+    "env_vars": [
+      "OMP_NUM_THREADS"
+    ]
+  }
+}

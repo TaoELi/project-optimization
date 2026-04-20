@@ -1,0 +1,45 @@
+{
+  "metric_label": "Weighted median neigh time (s)",
+  "direction": "lower",
+  "iterations_total": 28,
+  "accepted": [
+    "32b495fdb66b",
+    "380bf2b0146b",
+    "c4128d3970b2",
+    "8c29b124a2c6",
+    "08f5ab4a4e02",
+    "11db74893452"
+  ],
+  "rejected": [
+    "2d1eda35b944",
+    "3bd7cbc7ee03",
+    "1a1935b59c00",
+    "d89e6f820474",
+    "d381c38751ec",
+    "2894990122f9",
+    "b21ee6319e89",
+    "e5d6d4548fe4",
+    "7adf3bfc72a8",
+    "e536920bfbe5",
+    "e5eef089d2d0",
+    "d5b0238dc967",
+    "4a9dda87cf45",
+    "e35c58b86e07",
+    "708f9b2d16b1",
+    "a3f1052997d8",
+    "84babbbb36e3",
+    "b78acabc90a5",
+    "ba18979d7807",
+    "321fb756a836"
+  ],
+  "correctness_failure": [],
+  "baseline": {
+    "commit": "e7c0ed95a333",
+    "metric": 0.36158
+  },
+  "best": {
+    "commit": "11db74893452",
+    "metric": 0.28487,
+    "pct_vs_baseline": 21.215222080867306
+  }
+}

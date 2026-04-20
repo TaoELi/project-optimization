@@ -1,0 +1,317 @@
+diff --git a/src/CLASS2/bond_class2.cpp b/src/CLASS2/bond_class2.cpp
+index 8a7eec8215..f87f69fba7 100644
+--- a/src/CLASS2/bond_class2.cpp
++++ b/src/CLASS2/bond_class2.cpp
+@@ -30,6 +30,14 @@
+ 
+ using namespace LAMMPS_NS;
+ 
++using dbl3_t = struct {
++  double x, y, z;
++};
++
++using int3_t = struct {
++  int a, b, t;
++};
++
+ /* ---------------------------------------------------------------------- */
+ 
+ BondClass2::BondClass2(LAMMPS *lmp) : Bond(lmp)
+@@ -56,59 +64,84 @@ BondClass2::~BondClass2()
+ 
+ void BondClass2::compute(int eflag, int vflag)
+ {
+-  int i1,i2,n,type;
+-  double delx,dely,delz,ebond,fbond;
+-  double rsq,r,dr,dr2,dr3,dr4,de_bond;
++  int nbondlist = neighbor->nbondlist;
++  int newton_bond = force->newton_bond;
+ 
+-  ebond = 0.0;
+   ev_init(eflag,vflag);
+ 
+-  double **x = atom->x;
+-  double **f = atom->f;
+-  int **bondlist = neighbor->bondlist;
+-  int nbondlist = neighbor->nbondlist;
+-  int nlocal = atom->nlocal;
+-  int newton_bond = force->newton_bond;
++  if (nbondlist <= 0) return;
++
++  if (evflag) {
++    if (eflag) {
++      if (newton_bond) eval<1,1,1>(nbondlist);
++      else eval<1,1,0>(nbondlist);
++    } else {
++      if (newton_bond) eval<1,0,1>(nbondlist);
++      else eval<1,0,0>(nbondlist);
++    }
++  } else {
++    if (newton_bond) eval<0,0,1>(nbondlist);
++    else eval<0,0,0>(nbondlist);
++  }
++}
++
++template <int EVFLAG, int EFLAG, int NEWTON_BOND>
++void BondClass2::eval(int nbondlist)
++{
++  int i1, i2, type;
++  double delx, dely, delz, ebond, fbond;
++  double rsq, r, dr, dr2, dr3, dr4, de_bond;
++
++  const auto *_noalias const x = (dbl3_t *) atom->x[0];
++  auto *_noalias const f = (dbl3_t *) atom->f[0];    // NOLINT
++  const int3_t *_noalias const bondlist = (int3_t *) neighbor->bondlist[0];
++  const int nlocal = atom->nlocal;
++  const double *_noalias const coeff_r0 = r0;
++  const double *_noalias const coeff_k2 = k2;
++  const double *_noalias const coeff_k3 = k3;
++  const double *_noalias const coeff_k4 = k4;
++
++  ebond = 0.0;
+ 
+-  for (n = 0; n < nbondlist; n++) {
+-    i1 = bondlist[n][0];
+-    i2 = bondlist[n][1];
+-    type = bondlist[n][2];
++  for (int n = 0; n < nbondlist; n++) {
++    i1 = bondlist[n].a;
++    i2 = bondlist[n].b;
++    type = bondlist[n].t;
+ 
+-    delx = x[i1][0] - x[i2][0];
+-    dely = x[i1][1] - x[i2][1];
+-    delz = x[i1][2] - x[i2][2];
++    delx = x[i1].x - x[i2].x;
++    dely = x[i1].y - x[i2].y;
++    delz = x[i1].z - x[i2].z;
+ 
+     rsq = delx*delx + dely*dely + delz*delz;
+     r = sqrt(rsq);
+-    dr = r - r0[type];
++    dr = r - coeff_r0[type];
+     dr2 = dr*dr;
+     dr3 = dr2*dr;
+     dr4 = dr3*dr;
+ 
+     // force & energy
+ 
+-    de_bond = 2.0*k2[type]*dr + 3.0*k3[type]*dr2 + 4.0*k4[type]*dr3;
++    de_bond = 2.0*coeff_k2[type]*dr + 3.0*coeff_k3[type]*dr2 + 4.0*coeff_k4[type]*dr3;
+     if (r > 0.0) fbond = -de_bond/r;
+     else fbond = 0.0;
+ 
+-    if (eflag) ebond = k2[type]*dr2 + k3[type]*dr3 + k4[type]*dr4;
++    if (EFLAG) ebond = coeff_k2[type]*dr2 + coeff_k3[type]*dr3 + coeff_k4[type]*dr4;
+ 
+     // apply force to each of 2 atoms
+ 
+-    if (newton_bond || i1 < nlocal) {
+-      f[i1][0] += delx*fbond;
+-      f[i1][1] += dely*fbond;
+-      f[i1][2] += delz*fbond;
++    if (NEWTON_BOND || i1 < nlocal) {
++      f[i1].x += delx*fbond;
++      f[i1].y += dely*fbond;
++      f[i1].z += delz*fbond;
+     }
+ 
+-    if (newton_bond || i2 < nlocal) {
+-      f[i2][0] -= delx*fbond;
+-      f[i2][1] -= dely*fbond;
+-      f[i2][2] -= delz*fbond;
++    if (NEWTON_BOND || i2 < nlocal) {
++      f[i2].x -= delx*fbond;
++      f[i2].y -= dely*fbond;
++      f[i2].z -= delz*fbond;
+     }
+ 
+-    if (evflag) ev_tally(i1,i2,nlocal,newton_bond,ebond,fbond,delx,dely,delz);
++    if (EVFLAG) ev_tally(i1,i2,nlocal,NEWTON_BOND,ebond,fbond,delx,dely,delz);
+   }
+ }
+ 
+diff --git a/src/CLASS2/bond_class2.h b/src/CLASS2/bond_class2.h
+index b85e1c72d4..6c5ca116b1 100644
+--- a/src/CLASS2/bond_class2.h
++++ b/src/CLASS2/bond_class2.h
+@@ -42,6 +42,7 @@ class BondClass2 : public Bond {
+   double *r0, *k2, *k3, *k4;
+ 
+   virtual void allocate();
++  template <int EVFLAG, int EFLAG, int NEWTON_BOND> void eval(int);
+ };
+ 
+ }    // namespace LAMMPS_NS
+diff --git a/src/MOLECULE/angle_harmonic.cpp b/src/MOLECULE/angle_harmonic.cpp
+index db134de357..49f2849985 100644
+--- a/src/MOLECULE/angle_harmonic.cpp
++++ b/src/MOLECULE/angle_harmonic.cpp
+@@ -31,6 +31,14 @@ using MathConst::RAD2DEG;
+ 
+ static constexpr double SMALL = 0.001;
+ 
++using dbl3_t = struct {
++  double x, y, z;
++};
++
++using int4_t = struct {
++  int a, b, c, t;
++};
++
+ /* ---------------------------------------------------------------------- */
+ 
+ AngleHarmonic::AngleHarmonic(LAMMPS *_lmp) : Angle(_lmp)
+@@ -55,42 +63,65 @@ AngleHarmonic::~AngleHarmonic()
+ 
+ void AngleHarmonic::compute(int eflag, int vflag)
+ {
+-  int i1, i2, i3, n, type;
++  ev_init(eflag, vflag);
++
++  int nanglelist = neighbor->nanglelist;
++  int newton_bond = force->newton_bond;
++
++  if (nanglelist <= 0) return;
++
++  if (evflag) {
++    if (eflag) {
++      if (newton_bond) eval<1,1,1>(nanglelist);
++      else eval<1,1,0>(nanglelist);
++    } else {
++      if (newton_bond) eval<1,0,1>(nanglelist);
++      else eval<1,0,0>(nanglelist);
++    }
++  } else {
++    if (newton_bond) eval<0,0,1>(nanglelist);
++    else eval<0,0,0>(nanglelist);
++  }
++}
++
++template <int EVFLAG, int EFLAG, int NEWTON_BOND>
++void AngleHarmonic::eval(int nanglelist)
++{
++  int i1, i2, i3, type;
+   double delx1, dely1, delz1, delx2, dely2, delz2;
+   double eangle, f1[3], f3[3];
+   double dtheta, tk;
+   double rsq1, rsq2, r1, r2, c, s, a, a11, a12, a22;
+ 
+-  eangle = 0.0;
+-  ev_init(eflag, vflag);
++  const auto *_noalias const x = (dbl3_t *) atom->x[0];
++  auto *_noalias const f = (dbl3_t *) atom->f[0];    // NOLINT
++  const int4_t *_noalias const anglelist = (int4_t *) neighbor->anglelist[0];
++  const int nlocal = atom->nlocal;
++  const double *_noalias const coeff_k = k;
++  const double *_noalias const coeff_theta0 = theta0;
+ 
+-  double **x = atom->x;
+-  double **f = atom->f;
+-  int **anglelist = neighbor->anglelist;
+-  int nanglelist = neighbor->nanglelist;
+-  int nlocal = atom->nlocal;
+-  int newton_bond = force->newton_bond;
++  eangle = 0.0;
+ 
+-  for (n = 0; n < nanglelist; n++) {
+-    i1 = anglelist[n][0];
+-    i2 = anglelist[n][1];
+-    i3 = anglelist[n][2];
+-    type = anglelist[n][3];
++  for (int n = 0; n < nanglelist; n++) {
++    i1 = anglelist[n].a;
++    i2 = anglelist[n].b;
++    i3 = anglelist[n].c;
++    type = anglelist[n].t;
+ 
+     // 1st bond
+ 
+-    delx1 = x[i1][0] - x[i2][0];
+-    dely1 = x[i1][1] - x[i2][1];
+-    delz1 = x[i1][2] - x[i2][2];
++    delx1 = x[i1].x - x[i2].x;
++    dely1 = x[i1].y - x[i2].y;
++    delz1 = x[i1].z - x[i2].z;
+ 
+     rsq1 = delx1 * delx1 + dely1 * dely1 + delz1 * delz1;
+     r1 = sqrt(rsq1);
+ 
+     // 2nd bond
+ 
+-    delx2 = x[i3][0] - x[i2][0];
+-    dely2 = x[i3][1] - x[i2][1];
+-    delz2 = x[i3][2] - x[i2][2];
++    delx2 = x[i3].x - x[i2].x;
++    dely2 = x[i3].y - x[i2].y;
++    delz2 = x[i3].z - x[i2].z;
+ 
+     rsq2 = delx2 * delx2 + dely2 * dely2 + delz2 * delz2;
+     r2 = sqrt(rsq2);
+@@ -109,10 +140,10 @@ void AngleHarmonic::compute(int eflag, int vflag)
+ 
+     // force & energy
+ 
+-    dtheta = acos(c) - theta0[type];
+-    tk = k[type] * dtheta;
++    dtheta = acos(c) - coeff_theta0[type];
++    tk = coeff_k[type] * dtheta;
+ 
+-    if (eflag) eangle = tk * dtheta;
++    if (EFLAG) eangle = tk * dtheta;
+ 
+     a = -2.0 * tk * s;
+     a11 = a * c / rsq1;
+@@ -128,26 +159,26 @@ void AngleHarmonic::compute(int eflag, int vflag)
+ 
+     // apply force to each of 3 atoms
+ 
+-    if (newton_bond || i1 < nlocal) {
+-      f[i1][0] += f1[0];
+-      f[i1][1] += f1[1];
+-      f[i1][2] += f1[2];
++    if (NEWTON_BOND || i1 < nlocal) {
++      f[i1].x += f1[0];
++      f[i1].y += f1[1];
++      f[i1].z += f1[2];
+     }
+ 
+-    if (newton_bond || i2 < nlocal) {
+-      f[i2][0] -= f1[0] + f3[0];
+-      f[i2][1] -= f1[1] + f3[1];
+-      f[i2][2] -= f1[2] + f3[2];
++    if (NEWTON_BOND || i2 < nlocal) {
++      f[i2].x -= f1[0] + f3[0];
++      f[i2].y -= f1[1] + f3[1];
++      f[i2].z -= f1[2] + f3[2];
+     }
+ 
+-    if (newton_bond || i3 < nlocal) {
+-      f[i3][0] += f3[0];
+-      f[i3][1] += f3[1];
+-      f[i3][2] += f3[2];
++    if (NEWTON_BOND || i3 < nlocal) {
++      f[i3].x += f3[0];
++      f[i3].y += f3[1];
++      f[i3].z += f3[2];
+     }
+ 
+-    if (evflag)
+-      ev_tally(i1, i2, i3, nlocal, newton_bond, eangle, f1, f3, delx1, dely1, delz1, delx2, dely2,
++    if (EVFLAG)
++      ev_tally(i1, i2, i3, nlocal, NEWTON_BOND, eangle, f1, f3, delx1, dely1, delz1, delx2, dely2,
+                delz2);
+   }
+ }
+diff --git a/src/MOLECULE/angle_harmonic.h b/src/MOLECULE/angle_harmonic.h
+index 284a5316ef..0c58059539 100644
+--- a/src/MOLECULE/angle_harmonic.h
++++ b/src/MOLECULE/angle_harmonic.h
+@@ -42,6 +42,7 @@ class AngleHarmonic : public Angle {
+   double *k, *theta0;
+ 
+   virtual void allocate();
++  template <int EVFLAG, int EFLAG, int NEWTON_BOND> void eval(int);
+ };
+ 
+ }    // namespace LAMMPS_NS

@@ -1,0 +1,36 @@
+diff --git a/src/npair_bin.cpp b/src/npair_bin.cpp
+index 42917b2dda..178d975ed0 100644
+--- a/src/npair_bin.cpp
++++ b/src/npair_bin.cpp
+@@ -46,13 +46,15 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+   int *neighptr;
+   double xtmp, ytmp, ztmp, delx, dely, delz, rsq;
+ 
+-  double **x = atom->x;
+-  int *type = atom->type;
+-  int *mask = atom->mask;
+-  tagint *tag = atom->tag;
+-  tagint *molecule = atom->molecule;
+-  tagint **special = atom->special;
+-  int **nspecial = atom->nspecial;
++  using dbl3_t = double[3];
++
++  const auto * _noalias const x = (const dbl3_t *) atom->x[0];
++  const int * _noalias const type = atom->type;
++  int * _noalias const mask = atom->mask;
++  const tagint * _noalias const tag = atom->tag;
++  tagint * _noalias const molecule = atom->molecule;
++  tagint * const * _noalias const special = atom->special;
++  int * const * _noalias const nspecial = atom->nspecial;
+   int nlocal = atom->nlocal;
+   if (includegroup) nlocal = atom->nfirst;
+ 
+@@ -78,7 +80,7 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+       neighptr = ipage->vget();
+ 
+       itype = type[i];
+-      const double *const cutneighsq_i = cutneighsq[itype];
++      const double * _noalias const cutneighsq_i = cutneighsq[itype];
+       const tagint molecule_i = molecule[i];
+       const tagint *const special_i = special[i];
+       const int *const nspecial_i = nspecial[i];

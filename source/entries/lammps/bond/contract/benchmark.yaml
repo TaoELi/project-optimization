@@ -1,0 +1,194 @@
+schema_version: 1
+benchmark_id: lammps-tip4p-long-nve-bonded-hotpath
+package_id: lammps
+goal_context:
+  target: Optimize the bonded-force hot path of the TIP4P long-range water NVE workflow by reducing the intramolecular `bond_style class2` and `angle_style harmonic` cost without changing the model, timestep, or stable NVE behavior.
+  initial_hypothesis: The first useful direction is to cut per-topology arithmetic and memory traffic inside `BondClass2::compute()` and `AngleHarmonic::compute()`, especially redundant coefficient loads and transcendental-heavy angle geometry.
+  intent_level: guidance
+repo:
+  editable_paths:
+    - src/CLASS2/bond_class2.cpp
+    - src/CLASS2/bond_class2.h
+    - src/MOLECULE/angle_harmonic.cpp
+    - src/MOLECULE/angle_harmonic.h
+  immutable_paths:
+    - .fermilink-optimize/**
+    - skills/**
+    - cmake/**
+    - doc/**
+    - examples/**
+    - unittest/**
+campaign:
+  max_iterations: 120
+  stop_on_consecutive_rejections: 30
+worker:
+  max_iterations: 8
+  wait_seconds: 1
+controller:
+  timeout_seconds: 1800
+  warmup_runs: 1
+  measured_runs: 3
+  objective:
+    primary_metric: weighted_median_bond_seconds
+    direction: minimize
+    min_relative_improvement: 0.02
+  reject_on:
+    - crash
+    - timeout
+    - missing_metrics
+    - correctness_failure
+correctness:
+  mode: field_tolerances
+  field_tolerances:
+    - field: etotal
+      relative_delta: 1.0e-8
+    - field: etotal_drift_per_atom_per_step
+      abs_delta: 1.0e-8
+    - field: pe
+      relative_delta: 1.0e-8
+    - field: ke
+      relative_delta: 1.0e-8
+    - field: temp
+      relative_delta: 1.0e-8
+    - field: press
+      abs_delta: 1.0e-6
+    - field: density
+      abs_delta: 1.0e-12
+    - field: force_components
+      rms_delta: 1.0e-8
+      abs_delta: 1.0e-8
+    - field: atom_count
+      abs_delta: 0.0
+runtime:
+  mode: direct
+  command:
+    - python3
+    - .fermilink-optimize/autogen/benchmark_runner.py
+    - --benchmark
+    - '{benchmark}'
+    - --emit-json
+  env:
+    OMP_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+    OPENBLAS_NUM_THREADS: "1"
+    FERMILINK_GOAL_INPUT_ROOT: .fermilink-optimize/inputs/all
+  pre_commands:
+    - - bash
+      - -lc
+      - mkdir -p build && cd build && cmake -C ../cmake/presets/most.cmake -C ../cmake/presets/nolib.cmake -D PKG_GPU=off ../cmake && cmake --build . -j4
+cases:
+  - id: train-16r-short
+    weight: 1.0
+    input_script: in.tip4p_nve
+    data_file: water_216_data.lmp
+    mpi_ranks: 16
+    omp_num_threads: 1
+    expected_atoms: 41472
+    expected_bonds: 27648
+    expected_angles: 13824
+    run_steps: 1200
+    thermo_every: 100
+    timer_mode: full
+    timestep: 0.5
+    pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+    bond_style: class2
+    angle_style: harmonic
+    kspace_style: pppm/tip4p 0.0001
+    neighbor: 2.0 bin
+    replicate:
+      - 4
+      - 4
+      - 4
+  - id: train-32r-short
+    weight: 1.0
+    input_script: in.tip4p_nve
+    data_file: water_216_data.lmp
+    mpi_ranks: 32
+    omp_num_threads: 1
+    expected_atoms: 41472
+    expected_bonds: 27648
+    expected_angles: 13824
+    run_steps: 1200
+    thermo_every: 100
+    timer_mode: full
+    timestep: 0.5
+    pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+    bond_style: class2
+    angle_style: harmonic
+    kspace_style: pppm/tip4p 0.0001
+    neighbor: 2.0 bin
+    replicate:
+      - 4
+      - 4
+      - 4
+  - id: train-16r-long
+    weight: 1.0
+    input_script: in.tip4p_nve_long
+    data_file: water_216_data.lmp
+    mpi_ranks: 16
+    omp_num_threads: 1
+    expected_atoms: 41472
+    expected_bonds: 27648
+    expected_angles: 13824
+    run_steps: 10000
+    thermo_every: 100
+    timer_mode: full
+    timestep: 0.5
+    pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+    bond_style: class2
+    angle_style: harmonic
+    kspace_style: pppm/tip4p 0.0001
+    neighbor: 2.0 bin
+    replicate:
+      - 4
+      - 4
+      - 4
+  - id: test-32r-long
+    weight: 0.5
+    input_script: in.tip4p_nve_long
+    data_file: water_216_data.lmp
+    mpi_ranks: 32
+    omp_num_threads: 1
+    expected_atoms: 41472
+    expected_bonds: 27648
+    expected_angles: 13824
+    run_steps: 10000
+    thermo_every: 100
+    timer_mode: full
+    timestep: 0.5
+    pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+    bond_style: class2
+    angle_style: harmonic
+    kspace_style: pppm/tip4p 0.0001
+    neighbor: 2.0 bin
+    replicate:
+      - 4
+      - 4
+      - 4
+  - id: test-64r-short
+    weight: 0.25
+    input_script: in.tip4p_nve
+    data_file: water_216_data.lmp
+    mpi_ranks: 64
+    omp_num_threads: 1
+    expected_atoms: 41472
+    expected_bonds: 27648
+    expected_angles: 13824
+    run_steps: 1200
+    thermo_every: 100
+    timer_mode: full
+    timestep: 0.5
+    pair_style: lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+    bond_style: class2
+    angle_style: harmonic
+    kspace_style: pppm/tip4p 0.0001
+    neighbor: 2.0 bin
+    replicate:
+      - 4
+      - 4
+      - 4
+split:
+  train_case_ids:
+    - train-16r-short
+    - train-32r-short
+    - train-16r-long

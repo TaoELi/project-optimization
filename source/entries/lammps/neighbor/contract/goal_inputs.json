@@ -1,0 +1,52 @@
+{
+  "all_files": [
+    "in.tip4p_nve_long",
+    "water_216_data.lmp",
+    "in.tip4p_nve"
+  ],
+  "all_root_rel": ".fermilink-optimize/inputs/all",
+  "case_file_map": {
+    "test-16r-short": [
+      "in.tip4p_nve",
+      "water_216_data.lmp"
+    ],
+    "test-64r-short": [
+      "in.tip4p_nve",
+      "water_216_data.lmp"
+    ],
+    "train-16r-long": [
+      "in.tip4p_nve_long",
+      "water_216_data.lmp"
+    ],
+    "train-32r-long": [
+      "in.tip4p_nve_long",
+      "water_216_data.lmp"
+    ],
+    "train-32r-short": [
+      "in.tip4p_nve",
+      "water_216_data.lmp"
+    ]
+  },
+  "files": [
+    {
+      "source_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/in.tip4p_nve_long",
+      "staged_rel_path": "in.tip4p_nve_long"
+    },
+    {
+      "source_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/water_216_data.lmp",
+      "staged_rel_path": "water_216_data.lmp"
+    },
+    {
+      "source_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/in.tip4p_nve",
+      "staged_rel_path": "in.tip4p_nve"
+    }
+  ],
+  "goal_dir": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps",
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/cpp-lammps-tip4p-water-nve-neighbor-goal.md",
+  "goal_sha256": "49d38116530db90cde37e2889bcbda82403bd0206ceccc77598709b8a8b4d1fa",
+  "missing_references": [],
+  "schema_version": 1,
+  "shared_files": [],
+  "updated_at_utc": "2026-04-12T14:36:02.173619Z",
+  "worker_root_rel": ".fermilink-optimize/inputs/worker"
+}

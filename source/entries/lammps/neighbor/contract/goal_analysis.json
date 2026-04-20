@@ -1,0 +1,317 @@
+{
+  "build_system": {
+    "build_command": "mkdir -p build && cd build && cmake -C ../cmake/presets/most.cmake -C ../cmake/presets/nolib.cmake -D PKG_GPU=off ../cmake && cmake --build . -j4",
+    "install_command": "cd build && cmake --install .",
+    "type": "cmake"
+  },
+  "configuration_parameters": [
+    {
+      "description": "LAMMPS input script passed with -in/-i.",
+      "example": "in.tip4p_nve_long",
+      "name": "input_script",
+      "type": "string"
+    },
+    {
+      "description": "Data file loaded by read_data before replication.",
+      "example": "water_216_data.lmp",
+      "name": "data_file",
+      "type": "string"
+    },
+    {
+      "description": "Simulation unit style from the staged benchmark scripts.",
+      "example": "electron",
+      "name": "units",
+      "type": "string"
+    },
+    {
+      "description": "Atom style used by the benchmark scripts.",
+      "example": "full",
+      "name": "atom_style",
+      "type": "string"
+    },
+    {
+      "description": "TIP4P pair style and arguments. The staged scripts set O type, H type, bond type, angle type, qdist, and the LJ/Coulomb cutoff.",
+      "example": "lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007",
+      "name": "pair_style",
+      "type": "string"
+    },
+    {
+      "description": "Long-range solver required by the TIP4P long-range workload.",
+      "example": "pppm/tip4p 0.0001",
+      "name": "kspace_style",
+      "type": "string"
+    },
+    {
+      "description": "Neighbor style and skin distance. In Neighbor::set(), this maps to style=BIN and skin=2.0.",
+      "example": "neighbor 2.0 bin",
+      "name": "neighbor_command",
+      "type": "string"
+    },
+    {
+      "description": "Replication factors applied after read_data. The base file contains 216 waters (648 atoms); the staged workload replicates 4x4x4 to 41,472 atoms.",
+      "example": [
+        4,
+        4,
+        4
+      ],
+      "name": "replicate",
+      "type": "array[int]"
+    },
+    {
+      "description": "Deterministic seed used by velocity create.",
+      "example": 123451,
+      "name": "velocity_seed",
+      "type": "integer"
+    },
+    {
+      "description": "Integration timestep from the staged scripts.",
+      "example": 0.5,
+      "name": "timestep",
+      "type": "number"
+    },
+    {
+      "description": "Total run length encoded by the script.",
+      "example": 10000,
+      "name": "run_steps",
+      "type": "integer"
+    },
+    {
+      "description": "Thermo fields emitted every 100 steps in the staged scripts.",
+      "example": "custom step atoms temp etotal pe ke press density",
+      "name": "thermo_style",
+      "type": "string"
+    },
+    {
+      "description": "MPI rank count supplied by the launcher; benchmark cases vary this across 16, 32, and 64.",
+      "example": 32,
+      "name": "mpi_ranks",
+      "type": "integer"
+    },
+    {
+      "description": "OpenMP threads per rank. The goal specifies keeping this fixed at 1.",
+      "example": 1,
+      "name": "omp_threads",
+      "type": "integer"
+    }
+  ],
+  "editable_paths": [
+    "src/neighbor.cpp",
+    "src/neighbor.h",
+    "src/npair_bin.cpp",
+    "src/npair_bin.h"
+  ],
+  "entry_points": [
+    {
+      "call_signature": "lmp -in <input_script>",
+      "description": "MPI front-end executable. Calls MPI_Init(), constructs a LAMMPS instance, parses command-line switches including -in/-i, and dispatches the input script through Input::file().",
+      "module_or_file": "src/main.cpp; src/lammps.cpp",
+      "name": "lmp"
+    },
+    {
+      "call_signature": "void file(const char *filename)",
+      "description": "Opens a LAMMPS input script and executes it command by command. This is the path used both by the CLI and by unit tests that load scripted TIP4P fixtures.",
+      "module_or_file": "src/input.cpp",
+      "name": "Input::file"
+    },
+    {
+      "call_signature": "void run(int nsteps)",
+      "description": "Main NVE timestep loop. Calls neighbor->decide() every step, performs exchange/borders when reneighboring is needed, calls neighbor->build(1), then computes pair, bonded, and KSpace forces.",
+      "module_or_file": "src/verlet.cpp",
+      "name": "Verlet::run"
+    },
+    {
+      "call_signature": "int decide()",
+      "description": "Reneighbor decision point. Applies every/delay/build_once policy and, with default check=yes semantics, triggers a rebuild when any owned atom has moved more than half the skin distance since the last build.",
+      "module_or_file": "src/neighbor.cpp",
+      "name": "Neighbor::decide"
+    },
+    {
+      "call_signature": "void build(int topoflag)",
+      "description": "Perpetual neighbor rebuild hot path. Resets ago, stores reference coordinates for distance checking, bins all local and ghost atoms, rebuilds all perpetual pair lists, and rebuilds topology lists when topoflag=1.",
+      "module_or_file": "src/neighbor.cpp",
+      "name": "Neighbor::build"
+    },
+    {
+      "call_signature": "void build(NeighList *list)",
+      "description": "Binned pair-list construction kernel. For this workload, Neighbor::choose_pair() resolves the base CPU path to the molecular half/bin/newton orthogonal implementation, which iterates owned atoms over bin stencils, applies exclusions and special-neighbor encoding, and fills NeighList pages.",
+      "module_or_file": "src/npair_bin.cpp",
+      "name": "NPairBin::build"
+    }
+  ],
+  "immutable_paths": [
+    ".fermilink-optimize/**",
+    "skills/**",
+    "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/**",
+    "examples/**",
+    "unittest/**",
+    "cmake/**",
+    "src/** except src/neighbor.cpp, src/neighbor.h, src/npair_bin.cpp, src/npair_bin.h"
+  ],
+  "language": "cpp",
+  "output_quantities": [
+    {
+      "description": "Total energy from thermo output; primary NVE drift check across matched output steps.",
+      "field": "etotal",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Potential energy from thermo output.",
+      "field": "pe",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Kinetic energy from thermo output.",
+      "field": "ke",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Temperature from thermo output.",
+      "field": "temp",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Pressure from thermo output.",
+      "field": "press",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-06
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Density from thermo output.",
+      "field": "density",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 1e-10
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Per-atom force components for representative frames; compare RMS component deltas against baseline.",
+      "field": "forces_xyz",
+      "suggested_tolerance": {
+        "mode": "rms_delta",
+        "value": 1e-08
+      },
+      "type": "array"
+    },
+    {
+      "description": "Maximum absolute force-component deviation over representative frames.",
+      "field": "force_component_delta_max",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-07
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Reported by finish.cpp as 'Neighbor list builds'; useful to confirm rebuild cadence has not changed unexpectedly.",
+      "field": "neighbor_list_builds",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Reported by finish.cpp as 'Dangerous builds'; should remain zero for safe operation on these cases.",
+      "field": "dangerous_builds",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    }
+  ],
+  "package": "lammps",
+  "runtime_command_template": [
+    "{mpi_launcher}",
+    "-np",
+    "{mpi_ranks}",
+    "{repo_root}/build/lmp",
+    "-in",
+    "{staged_input_root}/{input_script}"
+  ],
+  "suggested_cases": [
+    {
+      "description": "Primary long-run training case on fewer ranks; repeated rebuilds with lower communication noise.",
+      "id": "train-16r-long",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve_long",
+        "mpi_ranks": 16,
+        "omp_threads": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Primary long-run training case on a second decomposition.",
+      "id": "train-32r-long",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve_long",
+        "mpi_ranks": 32,
+        "omp_threads": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Shorter-turnaround training case with the same physics and neighbor settings.",
+      "id": "train-32r-short",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 32,
+        "omp_threads": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Held-out lower-rank validation case.",
+      "id": "test-16r-short",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 16,
+        "omp_threads": 1
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Held-out scaling-sensitive case where neighbor and communication interact more strongly.",
+      "id": "test-64r-short",
+      "parameters": {
+        "data_file": "water_216_data.lmp",
+        "input_script": "in.tip4p_nve",
+        "mpi_ranks": 64,
+        "omp_threads": 1
+      },
+      "weight": 1.0
+    }
+  ],
+  "threading_model": {
+    "default_threads": 1,
+    "description": "Primary parallelism is MPI domain decomposition. src/main.cpp calls MPI_Init() and the lmp executable runs one LAMMPS instance over an MPI communicator. The editable hot path in src/neighbor.cpp and src/npair_bin.cpp is the base CPU per-rank neighbor code, not a threaded kernel. OpenMP support may be compiled if available, and OPENMP/Kokkos variants exist elsewhere, but the staged scripts use non-suffixed styles and the goal explicitly fixes OMP_NUM_THREADS=1; PKG_GPU is disabled in the provided build.",
+    "env_vars": [
+      "OMP_NUM_THREADS",
+      "OMP_PROC_BIND"
+    ]
+  }
+}

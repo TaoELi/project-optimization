@@ -1,0 +1,25 @@
+{
+  "analysis_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-bond/.fermilink-optimize/autogen/goal_analysis.json",
+  "benchmark_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-bond/.fermilink-optimize/autogen/benchmark.yaml",
+  "created_at_utc": "2026-04-12T05:55:37.480801Z",
+  "created_files": {
+    "analysis": true,
+    "benchmark": true,
+    "run_script": true,
+    "runner": true,
+    "setup": true,
+    "submit_launcher": true
+  },
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/input_cpp_lammps/cpp-lammps-tip4p-water-nve-bonded-goal.md",
+  "goal_sha256": "b7b4dd49c280f0b2178527366a50cceb466d007e5a0965cbf9c06b4ae864b516",
+  "language": "cpp",
+  "mode": "goal",
+  "package_id": "lammps",
+  "project_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-bond",
+  "review_notes": "- Confirm the benchmark launcher runs from the staged goal input root, or explicitly `cd` there before invoking `lmp`; the input scripts use `read_data water_216_data.lmp` as a relative path.\n- Confirm that `bond_seconds` is interpreted as the stock LAMMPS `Bond` timing section. It aggregates bond, angle, dihedral, and improper work; for this water deck only bond and angle are present, so it is a valid proxy here.\n- Prefer reporting throughput in timesteps/s (or atom-step/s) rather than ns/day, because this workload uses `units electron` and time-unit conversions are less standard than in `real` or `metal`.\n- Keep `OMP_NUM_THREADS=1` and avoid `-sf omp` / `-pk omp` in the benchmark command unless you intentionally want `/omp` variants instead of the base `bond_class2.cpp` and `angle_harmonic.cpp` kernels.\n- The tolerance values in the JSON are workflow-level suggestions. The existing style unit tests are much tighter, but practical end-to-end TIP4P NVE tolerances should be calibrated once a baseline run is available.\n- `build/lmp` was not present during validation in this workspace. The benchmark validates structurally, but authoritative runs depend on `runtime.pre_commands` succeeding and producing that binary.\n- The objective uses weighted median `bond_seconds`; I downweighted the held-out validation cases (`test-32r-long` at `0.5`, `test-64r-short` at `0.25`) so the train cases dominate optimization direction while the test cases still matter.\n- Correctness is enforced with thermo series, NVE drift, and a final-state sampled force dump. The optional direct `bond_pe_sum` and `angle_pe_sum` quantities are not emitted by this runner.\n- The runner expects staged workload files under `.fermilink-optimize/inputs/all` unless `FERMILINK_GOAL_INPUT_ROOT` overrides it, and it expects standard LAMMPS `timer full` output with `Bond`, `Pair`, `Kspace`, `Neigh`, and `Comm` rows.",
+  "run_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-bond/.fermilink-optimize/autogen/run_optimize.sh",
+  "runner_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-bond/.fermilink-optimize/autogen/benchmark_runner.py",
+  "schema_version": 1,
+  "setup_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-bond/.fermilink-optimize/autogen/setup_env.sh",
+  "submit_launcher_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_lammps/lammps-bond/.fermilink-optimize/autogen/submit_poll_launcher.py"
+}

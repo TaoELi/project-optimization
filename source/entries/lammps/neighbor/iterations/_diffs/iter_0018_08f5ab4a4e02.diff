@@ -1,0 +1,129 @@
+diff --git a/src/npair_bin.cpp b/src/npair_bin.cpp
+index 178d975ed0..dbf6866d61 100644
+--- a/src/npair_bin.cpp
++++ b/src/npair_bin.cpp
+@@ -50,22 +50,19 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+ 
+   const auto * _noalias const x = (const dbl3_t *) atom->x[0];
+   const int * _noalias const type = atom->type;
+-  int * _noalias const mask = atom->mask;
+   const tagint * _noalias const tag = atom->tag;
+   tagint * _noalias const molecule = atom->molecule;
+   tagint * const * _noalias const special = atom->special;
+   int * const * _noalias const nspecial = atom->nspecial;
++  const int * _noalias const atom2bin = this->atom2bin;
++  const int * _noalias const bins = this->bins;
++  const int * _noalias const binhead = this->binhead;
++  const int * _noalias const stencil = this->stencil;
+   int nlocal = atom->nlocal;
+   if (includegroup) nlocal = atom->nfirst;
+-
+-  const bool moltemplate = (molecular == Atom::TEMPLATE);
+-  int *molindex = atom->molindex;
+-  int *molatom = atom->molatom;
+-  Molecule **onemols = atom->avec->onemols;
+-
+-  int *ilist = list->ilist;
+-  int *numneigh = list->numneigh;
+-  int **firstneigh = list->firstneigh;
++  int * _noalias const ilist = list->ilist;
++  int * _noalias const numneigh = list->numneigh;
++  int ** _noalias const firstneigh = list->firstneigh;
+   MyPage<int> *ipage = list->ipage;
+ 
+   int inum = 0;
+@@ -90,13 +87,23 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+ 
+       ibin = atom2bin[i];
+ 
+-      for (j = bins[i]; j >= 0; j = bins[j]) {
++      for (j = bins[i]; j >= 0; ) {
++        const int jnext = bins[j];
+         const double *const xj = x[j];
+         if (j >= nlocal) {
+-          if (xj[2] < ztmp) continue;
++          if (xj[2] < ztmp) {
++            j = jnext;
++            continue;
++          }
+           if (xj[2] == ztmp) {
+-            if (xj[1] < ytmp) continue;
+-            if ((xj[1] == ytmp) && (xj[0] < xtmp)) continue;
++            if (xj[1] < ytmp) {
++              j = jnext;
++              continue;
++            }
++            if ((xj[1] == ytmp) && (xj[0] < xtmp)) {
++              j = jnext;
++              continue;
++            }
+           }
+         }
+ 
+@@ -107,9 +114,13 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+         delz = ztmp - xj[2];
+         rsq = delx * delx + dely * dely + delz * delz;
+ 
+-        if (rsq > cutneighsq_i[jtype]) continue;
++        if (rsq > cutneighsq_i[jtype]) {
++          j = jnext;
++          continue;
++        }
+         if (molecule_i != molecule[j]) {
+           neighptr[n++] = j;
++          j = jnext;
+           continue;
+         }
+ 
+@@ -122,10 +133,13 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+           neighptr[n++] = j;
+         else if (which > 0)
+           neighptr[n++] = j ^ (which << SBBITS);
++
++        j = jnext;
+       }
+ 
+       for (k = 1; k < nstencil; k++) {
+-        for (j = binhead[ibin + stencil[k]]; j >= 0; j = bins[j]) {
++        for (j = binhead[ibin + stencil[k]]; j >= 0; ) {
++          const int jnext = bins[j];
+           const double *const xj = x[j];
+           jtype = type[j];
+ 
+@@ -134,9 +148,13 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+           delz = ztmp - xj[2];
+           rsq = delx * delx + dely * dely + delz * delz;
+ 
+-          if (rsq > cutneighsq_i[jtype]) continue;
++          if (rsq > cutneighsq_i[jtype]) {
++            j = jnext;
++            continue;
++          }
+           if (molecule_i != molecule[j]) {
+             neighptr[n++] = j;
++            j = jnext;
+             continue;
+           }
+ 
+@@ -149,6 +167,8 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+             neighptr[n++] = j;
+           else if (which > 0)
+             neighptr[n++] = j ^ (which << SBBITS);
++
++          j = jnext;
+         }
+       }
+ 
+@@ -163,6 +183,12 @@ void NPairBin<1, 1, 0, 0, 0>::build(NeighList *list)
+     return;
+   }
+ 
++  int * _noalias const mask = atom->mask;
++  const bool moltemplate = (molecular == Atom::TEMPLATE);
++  int * _noalias const molindex = atom->molindex;
++  int * _noalias const molatom = atom->molatom;
++  Molecule **onemols = atom->avec->onemols;
++
+   for (i = 0; i < nlocal; i++) {
+     n = 0;
+     neighptr = ipage->vget();

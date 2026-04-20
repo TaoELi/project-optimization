@@ -1,0 +1,132 @@
+diff --git a/src/CLASS2/bond_class2.cpp b/src/CLASS2/bond_class2.cpp
+index f87f69fba7..4eb7c0fb39 100644
+--- a/src/CLASS2/bond_class2.cpp
++++ b/src/CLASS2/bond_class2.cpp
+@@ -66,22 +66,38 @@ void BondClass2::compute(int eflag, int vflag)
+ {
+   int nbondlist = neighbor->nbondlist;
+   int newton_bond = force->newton_bond;
++  const int one_type = atom->nbondtypes == 1;
+ 
+   ev_init(eflag,vflag);
+ 
+   if (nbondlist <= 0) return;
+ 
+-  if (evflag) {
+-    if (eflag) {
+-      if (newton_bond) eval<1,1,1>(nbondlist);
+-      else eval<1,1,0>(nbondlist);
++  if (one_type) {
++    if (evflag) {
++      if (eflag) {
++        if (newton_bond) eval_one_type<1,1,1>(nbondlist);
++        else eval_one_type<1,1,0>(nbondlist);
++      } else {
++        if (newton_bond) eval_one_type<1,0,1>(nbondlist);
++        else eval_one_type<1,0,0>(nbondlist);
++      }
+     } else {
+-      if (newton_bond) eval<1,0,1>(nbondlist);
+-      else eval<1,0,0>(nbondlist);
++      if (newton_bond) eval_one_type<0,0,1>(nbondlist);
++      else eval_one_type<0,0,0>(nbondlist);
+     }
+   } else {
+-    if (newton_bond) eval<0,0,1>(nbondlist);
+-    else eval<0,0,0>(nbondlist);
++    if (evflag) {
++      if (eflag) {
++        if (newton_bond) eval<1,1,1>(nbondlist);
++        else eval<1,1,0>(nbondlist);
++      } else {
++        if (newton_bond) eval<1,0,1>(nbondlist);
++        else eval<1,0,0>(nbondlist);
++      }
++    } else {
++      if (newton_bond) eval<0,0,1>(nbondlist);
++      else eval<0,0,0>(nbondlist);
++    }
+   }
+ }
+ 
+@@ -145,6 +161,68 @@ void BondClass2::eval(int nbondlist)
+   }
+ }
+ 
++template <int EVFLAG, int EFLAG, int NEWTON_BOND>
++void BondClass2::eval_one_type(int nbondlist)
++{
++  int i1, i2;
++  double delx, dely, delz, ebond, fbond;
++  double rsq, r, dr, dr2, dr3, dr4, de_bond;
++
++  const auto *_noalias const x = (dbl3_t *) atom->x[0];
++  auto *_noalias const f = (dbl3_t *) atom->f[0];    // NOLINT
++  const int3_t *_noalias const bondlist = (int3_t *) neighbor->bondlist[0];
++  const int nlocal = atom->nlocal;
++  const double coeff_r0 = r0[1];
++  const double coeff_k2 = k2[1];
++  const double coeff_k3 = k3[1];
++  const double coeff_k4 = k4[1];
++  const double coeff_2k2 = 2.0 * coeff_k2;
++  const double coeff_3k3 = 3.0 * coeff_k3;
++  const double coeff_4k4 = 4.0 * coeff_k4;
++
++  ebond = 0.0;
++
++  for (int n = 0; n < nbondlist; n++) {
++    i1 = bondlist[n].a;
++    i2 = bondlist[n].b;
++
++    delx = x[i1].x - x[i2].x;
++    dely = x[i1].y - x[i2].y;
++    delz = x[i1].z - x[i2].z;
++
++    rsq = delx*delx + dely*dely + delz*delz;
++    r = sqrt(rsq);
++    dr = r - coeff_r0;
++    dr2 = dr*dr;
++    dr3 = dr2*dr;
++    dr4 = dr3*dr;
++
++    // force & energy
++
++    de_bond = coeff_2k2*dr + coeff_3k3*dr2 + coeff_4k4*dr3;
++    if (r > 0.0) fbond = -de_bond/r;
++    else fbond = 0.0;
++
++    if (EFLAG) ebond = coeff_k2*dr2 + coeff_k3*dr3 + coeff_k4*dr4;
++
++    // apply force to each of 2 atoms
++
++    if (NEWTON_BOND || i1 < nlocal) {
++      f[i1].x += delx*fbond;
++      f[i1].y += dely*fbond;
++      f[i1].z += delz*fbond;
++    }
++
++    if (NEWTON_BOND || i2 < nlocal) {
++      f[i2].x -= delx*fbond;
++      f[i2].y -= dely*fbond;
++      f[i2].z -= delz*fbond;
++    }
++
++    if (EVFLAG) ev_tally(i1,i2,nlocal,NEWTON_BOND,ebond,fbond,delx,dely,delz);
++  }
++}
++
+ /* ---------------------------------------------------------------------- */
+ 
+ void BondClass2::allocate()
+diff --git a/src/CLASS2/bond_class2.h b/src/CLASS2/bond_class2.h
+index 6c5ca116b1..de72ebe03b 100644
+--- a/src/CLASS2/bond_class2.h
++++ b/src/CLASS2/bond_class2.h
+@@ -43,6 +43,7 @@ class BondClass2 : public Bond {
+ 
+   virtual void allocate();
+   template <int EVFLAG, int EFLAG, int NEWTON_BOND> void eval(int);
++  template <int EVFLAG, int EFLAG, int NEWTON_BOND> void eval_one_type(int);
+ };
+ 
+ }    // namespace LAMMPS_NS

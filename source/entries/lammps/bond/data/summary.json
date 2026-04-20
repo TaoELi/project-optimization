@@ -1,0 +1,46 @@
+{
+  "metric_label": "Weighted median bond time (s)",
+  "direction": "lower",
+  "iterations_total": 27,
+  "accepted": [
+    "911f06a50100",
+    "4a79c588ea08",
+    "cf4ba8e7204d",
+    "672cbe901cae",
+    "0826ffd39444",
+    "30584dbe2ab0",
+    "bf07f28c4118"
+  ],
+  "rejected": [
+    "e5c1ddf090fa",
+    "224da0125669",
+    "e639b3949f97",
+    "47d88a349494",
+    "e3c2ae9ee96a",
+    "6fbda0abc94b",
+    "0890ed81e853",
+    "1f058192fe33",
+    "738ffb9e3a30",
+    "bed99cfa6486",
+    "acd350270fd3",
+    "c0a62a11cfaf",
+    "efcb4c8f585c",
+    "567a79cfb769",
+    "2c69753dfc48",
+    "a0800c8480fc"
+  ],
+  "correctness_failure": [
+    "25f839bdfc42",
+    "fdcd68522a83",
+    "e4103f7dab04"
+  ],
+  "baseline": {
+    "commit": "e7c0ed95a333",
+    "metric": 0.32627
+  },
+  "best": {
+    "commit": "bf07f28c4118",
+    "metric": 0.21875,
+    "pct_vs_baseline": 32.95430165200601
+  }
+}
