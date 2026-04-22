@@ -1,0 +1,227 @@
+schema_version: 1
+benchmark_id: pyscf-tddft-davidson-lr-eig-20260421
+package_id: pyscf
+goal_context:
+  target: Optimize the Davidson-style subspace eigensolver used by PySCF TDDFT/TDA,
+    especially pyscf/tdscf/_lr_eig.py and TD response call sites.
+  initial_hypothesis: Reduce TD kernel time by improving reduced Davidson restart/preconditioner
+    choices and by incrementally maintaining projected subspace matrices in eigh,
+    eig, and real_eig.
+  intent_level: guidance
+repo:
+  editable_paths:
+  - pyscf/tdscf/_lr_eig.py
+  - pyscf/tdscf/rhf.py
+  - pyscf/tdscf/rks.py
+  - pyscf/tdscf/uhf.py
+  - pyscf/tdscf/uks.py
+  - pyscf/lib/linalg_helper.py
+  immutable_paths:
+  - .fermilink-optimize/**
+  - skills/**
+split:
+  train_case_ids:
+  - train-rks-bp86-casida-benzene
+  - train-rks-b3lyp-tddft-benzene
+  - train-uks-bp86-casida-allyl
+campaign:
+  max_iterations: 120
+  stop_on_consecutive_rejections: 30
+worker:
+  max_iterations: 8
+  wait_seconds: 1
+controller:
+  timeout_seconds: 9000
+  warmup_runs: 1
+  measured_runs: 3
+  objective:
+    primary_metric: weighted_median_td_kernel_wall_seconds
+    direction: minimize
+    min_relative_improvement: 0.02
+  reject_on:
+  - crash
+  - timeout
+  - missing_metrics
+  - correctness_failure
+correctness:
+  mode: field_tolerances
+  require_all_cases_converged: true
+  field_tolerances:
+  - field: e
+    abs_delta: 5.0e-06
+    label: excitation energies
+  - field: converged_roots
+    abs_delta: 0.0
+    label: per-root convergence flags
+  - field: root_count
+    abs_delta: 0.0
+    label: number of returned TD roots
+  - field: oscillator_strength
+    abs_delta: 0.0001
+    label: oscillator strengths for exposed singlet closed-shell cases
+  - field: transition_dipole_norm
+    abs_delta: 0.0001
+    label: sign-invariant transition dipole norms for exposed singlet closed-shell cases
+runtime:
+  mode: direct
+  command:
+  - /anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/venvs/fermilink-optimize/pyscf-davidson/bin/python
+  - .fermilink-optimize/autogen/benchmark_runner.py
+  - --benchmark
+  - '{benchmark}'
+  - --emit-json
+  env:
+    OMP_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    BLIS_NUM_THREADS: '1'
+    VECLIB_MAXIMUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
+    FERMILINK_GOAL_INPUT_ROOT: .
+  pre_commands:
+  - - bash
+    - -lc
+    - set -euo pipefail; export SOURCE_REPO_ROOT="${SOURCE_REPO_ROOT:-$(pwd)}"; export
+      VENV="/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/venvs/fermilink-optimize/pyscf-davidson";
+      source "$VENV/bin/activate"; module remove cmake >/dev/null 2>&1 || true; cd
+      "$SOURCE_REPO_ROOT/pyscf/lib"; mkdir -p build; cd build; cmake ..; cmake --build
+      . -j4; cd "$SOURCE_REPO_ROOT"; "$VENV/bin/python" -m pip install -e .
+cases:
+- id: train-rks-bp86-casida-benzene
+  weight: 1.0
+  geometry_name: benzene
+  geometry_source: examples/2-benchmark/bz.py
+  basis: 6-31g
+  charge: 0
+  spin: 0
+  symmetry: false
+  scf_method: RKS
+  xc: b88,p86
+  td_method: CasidaTDDFT
+  nstates: 12
+  singlet: true
+  frozen: null
+  wfnsym: null
+  scf_conv_tol: 1.0e-10
+  td_conv_tol: 1.0e-05
+  lindep: 1.0e-12
+  max_cycle: 100
+  positive_eig_threshold: 0.001
+  deg_eia_thresh: 0.001
+  max_memory: 4000
+  oscillator_strength: true
+- id: train-rks-b3lyp-tddft-benzene
+  weight: 1.0
+  geometry_name: benzene
+  geometry_source: examples/2-benchmark/bz.py
+  basis: 6-31g
+  charge: 0
+  spin: 0
+  symmetry: false
+  scf_method: RKS
+  xc: b3lyp5
+  td_method: TDDFT
+  nstates: 10
+  singlet: true
+  frozen: null
+  wfnsym: null
+  scf_conv_tol: 1.0e-10
+  td_conv_tol: 1.0e-05
+  lindep: 1.0e-12
+  max_cycle: 100
+  positive_eig_threshold: 0.001
+  deg_eia_thresh: 0.001
+  max_memory: 4000
+  oscillator_strength: true
+- id: train-uks-bp86-casida-allyl
+  weight: 1.0
+  geometry_name: allyl
+  geometry_source: examples/mp/12-dfump2-natorbs.py
+  basis: def2-svp
+  charge: 0
+  spin: 1
+  symmetry: false
+  scf_method: UKS
+  xc: b88,p86
+  td_method: CasidaTDDFT
+  nstates: 8
+  singlet: null
+  frozen: null
+  wfnsym: null
+  scf_conv_tol: 1.0e-10
+  td_conv_tol: 1.0e-05
+  lindep: 1.0e-12
+  max_cycle: 100
+  positive_eig_threshold: 0.001
+  deg_eia_thresh: 0.001
+  max_memory: 4000
+  oscillator_strength: false
+- id: test-rks-bp86-casida-benzene-631gss
+  weight: 1.0
+  geometry_name: benzene
+  geometry_source: examples/2-benchmark/bz.py
+  basis: 6-31g**
+  charge: 0
+  spin: 0
+  symmetry: false
+  scf_method: RKS
+  xc: b88,p86
+  td_method: CasidaTDDFT
+  nstates: 12
+  singlet: true
+  frozen: null
+  wfnsym: null
+  scf_conv_tol: 1.0e-10
+  td_conv_tol: 1.0e-05
+  lindep: 1.0e-12
+  max_cycle: 100
+  positive_eig_threshold: 0.001
+  deg_eia_thresh: 0.001
+  max_memory: 4000
+  oscillator_strength: true
+- id: test-rks-b3lyp-tddft-benzene-631gss
+  weight: 1.0
+  geometry_name: benzene
+  geometry_source: examples/2-benchmark/bz.py
+  basis: 6-31g**
+  charge: 0
+  spin: 0
+  symmetry: false
+  scf_method: RKS
+  xc: b3lyp5
+  td_method: TDDFT
+  nstates: 10
+  singlet: true
+  frozen: null
+  wfnsym: null
+  scf_conv_tol: 1.0e-10
+  td_conv_tol: 1.0e-05
+  lindep: 1.0e-12
+  max_cycle: 100
+  positive_eig_threshold: 0.001
+  deg_eia_thresh: 0.001
+  max_memory: 4000
+  oscillator_strength: true
+- id: test-uks-bp86-casida-allyl-def2tzvp
+  weight: 1.0
+  geometry_name: allyl
+  geometry_source: examples/mp/12-dfump2-natorbs.py
+  basis: def2-TZVP
+  charge: 0
+  spin: 1
+  symmetry: false
+  scf_method: UKS
+  xc: b88,p86
+  td_method: CasidaTDDFT
+  nstates: 8
+  singlet: null
+  frozen: null
+  wfnsym: null
+  scf_conv_tol: 1.0e-10
+  td_conv_tol: 1.0e-05
+  lindep: 1.0e-12
+  max_cycle: 100
+  positive_eig_threshold: 0.001
+  deg_eia_thresh: 0.001
+  max_memory: 4000
+  oscillator_strength: false

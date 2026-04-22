@@ -1,0 +1,14 @@
+diff --git a/pyscf/tdscf/_lr_eig.py b/pyscf/tdscf/_lr_eig.py
+index 41206dead..0937fed8f 100644
+--- a/pyscf/tdscf/_lr_eig.py
++++ b/pyscf/tdscf/_lr_eig.py
+@@ -694,7 +694,8 @@ def real_eig(aop, x0, precond, tol_residual=1e-5, nroots=1, x0sym=None, pick=Non
+             break
+ 
+         r_index = r_norms > tol_residual
+-        XY_new = precond(np.vstack([R_x[:,r_index], -R_y[:,r_index]]).T, w[r_index])
++        XY_new = precond(np.vstack([R_x[:,r_index], -R_y[:,r_index]]).T,
++                         w[r_index] + 5e-2)
+         X_new = XY_new[:,:A_size].T
+         Y_new = XY_new[:,A_size:].T
+         if x0sym is None:

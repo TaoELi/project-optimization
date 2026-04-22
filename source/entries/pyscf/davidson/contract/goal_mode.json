@@ -1,0 +1,27 @@
+{
+  "analysis_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson/.fermilink-optimize/autogen/goal_analysis.json",
+  "benchmark_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson/.fermilink-optimize/autogen/benchmark.yaml",
+  "created_at_utc": "2026-04-21T12:06:05.111840Z",
+  "created_files": {
+    "analysis": true,
+    "benchmark": true,
+    "goal_markdown": true,
+    "run_script": true,
+    "runner": true,
+    "setup": true,
+    "submit_launcher": true
+  },
+  "goal_copy_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson/.fermilink-optimize/autogen/goal.md",
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/python-pyscf-tddft-davidson-goal.md",
+  "goal_sha256": "1de711dbd16c69261bc5e3f29c1424bbc7aa4da7b2ac31eed505a1f16d3a1b45",
+  "language": "python",
+  "mode": "goal",
+  "package_id": "pyscf",
+  "project_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson",
+  "review_notes": "No tests or benchmarks were run, per instruction. The current TD preconditioner is diagonal hdiag-based and often applies the first selected root energy to residual preconditioning, which is a likely review area for the optimization goal. Iteration and matvec counts are logged internally but not exposed as stable public outputs, so the benchmark harness may need lightweight instrumentation to collect them.\nWrote both files under `.fermilink-optimize/autogen` only. YAML parsing, runner bytecode compilation, and runner `--help` were validated. I did not run the full benchmark because it would launch all six SCF+TDDFT workloads; the explicit venv currently imports CLI help but needs the required `runtime.pre_commands` install step before NumPy/PySCF execution. The split block is intentionally omitted because all case ids use `train-` or `test-` prefixes, so FermiLink can infer the split.",
+  "run_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson/.fermilink-optimize/autogen/run_optimize.sh",
+  "runner_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson/.fermilink-optimize/autogen/benchmark_runner.py",
+  "schema_version": 1,
+  "setup_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson/.fermilink-optimize/autogen/setup_env.sh",
+  "submit_launcher_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-davidson/.fermilink-optimize/autogen/submit_poll_launcher.py"
+}

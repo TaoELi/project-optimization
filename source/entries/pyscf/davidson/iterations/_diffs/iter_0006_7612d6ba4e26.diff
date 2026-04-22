@@ -1,0 +1,16 @@
+diff --git a/pyscf/tdscf/_lr_eig.py b/pyscf/tdscf/_lr_eig.py
+index e9a3b6656..328c17319 100644
+--- a/pyscf/tdscf/_lr_eig.py
++++ b/pyscf/tdscf/_lr_eig.py
+@@ -81,8 +81,9 @@ def eigh(aop, x0, precond, tol_residual=1e-5, lindep=1e-12, nroots=1,
+     if MAX_SPACE_INC is None:
+         space_inc = nroots
+     else:
+-        # Adding too many trial bases in each iteration may cause larger errors
+-        space_inc = max(nroots, min(MAX_SPACE_INC, x0_size//2))
++        # Keep TD response expansion focused on requested roots instead of
++        # spending residual/preconditioner work on non-target Ritz vectors.
++        space_inc = nroots
+ 
+     max_space = int(max_memory*1e6/8/x0_size / 2 - nroots - space_inc)
+     if max_space < nroots * 4 < x0_size:

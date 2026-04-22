@@ -1,0 +1,35 @@
+{
+  "metric_label": "Weighted median td kernel wall time (s)",
+  "direction": "lower",
+  "iterations_total": 17,
+  "accepted": [
+    "b93246c4bf06",
+    "e159c73ee967",
+    "ccc6bedc3559",
+    "7612d6ba4e26",
+    "c1e86bf88a7c",
+    "64da7449ef1c"
+  ],
+  "rejected": [
+    "7b1eeb5571f7",
+    "f46de8e0dbb1",
+    "3c057cbab323",
+    "caffdfe9f92b",
+    "110904bf4af3",
+    "701a4b52c9e7",
+    "c2b4290991d4",
+    "933fdb1739c3",
+    "c046c9ec1362",
+    "2a188b646cff"
+  ],
+  "correctness_failure": [],
+  "baseline": {
+    "commit": "44c83aaae41f",
+    "metric": 128.753286794
+  },
+  "best": {
+    "commit": "64da7449ef1c",
+    "metric": 30.0180831933,
+    "pct_vs_baseline": 76.68557910965977
+  }
+}

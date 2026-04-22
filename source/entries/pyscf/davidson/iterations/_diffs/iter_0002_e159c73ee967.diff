@@ -1,0 +1,16 @@
+diff --git a/pyscf/tdscf/_lr_eig.py b/pyscf/tdscf/_lr_eig.py
+index 2acd5e230..87fdadfea 100644
+--- a/pyscf/tdscf/_lr_eig.py
++++ b/pyscf/tdscf/_lr_eig.py
+@@ -534,8 +534,9 @@ def real_eig(aop, x0, precond, tol_residual=1e-5, nroots=1, x0sym=None, pick=Non
+     if MAX_SPACE_INC is None:
+         space_inc = nroots
+     else:
+-        # Adding too many trial bases in each iteration may cause larger errors
+-        space_inc = max(nroots, min(MAX_SPACE_INC, A_size//2))
++        # Real TDDFT response batches are expensive. Keep the expansion focused
++        # on requested roots instead of adding non-target search roots.
++        space_inc = nroots
+ 
+     max_space = int(max_memory*1e6/8/(4*A_size) / 2 - space_inc)
+     if max_space < nroots * 4 < A_size:

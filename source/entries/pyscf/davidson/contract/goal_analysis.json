@@ -1,0 +1,346 @@
+{
+  "build_system": {
+    "build_command": "cd pyscf/lib && mkdir -p build && cd build && cmake .. && cmake --build . -j4",
+    "install_command": "python -m pip install -e .",
+    "type": "pip/setuptools + cmake"
+  },
+  "configuration_parameters": [
+    {
+      "description": "Molecular geometry accepted by pyscf.gto.Mole/M.",
+      "example": "benzene geometry from examples/2-benchmark/bz.py",
+      "name": "atom",
+      "type": "string/list"
+    },
+    {
+      "description": "AO basis set.",
+      "example": "6-31g**",
+      "name": "basis",
+      "type": "string"
+    },
+    {
+      "description": "Molecular charge.",
+      "example": "0",
+      "name": "charge",
+      "type": "int"
+    },
+    {
+      "description": "2S spin multiplicity parameter used by PySCF; allyl radical uses spin=1.",
+      "example": "1",
+      "name": "spin",
+      "type": "int"
+    },
+    {
+      "description": "Reference method class.",
+      "example": "RKS or UKS",
+      "name": "scf_method",
+      "type": "enum"
+    },
+    {
+      "description": "DFT exchange-correlation functional for RKS/UKS.",
+      "example": "b88,p86 or b3lyp5",
+      "name": "xc",
+      "type": "string"
+    },
+    {
+      "description": "TD solver variant.",
+      "example": "TDA, TDDFT, CasidaTDDFT",
+      "name": "td_method",
+      "type": "enum"
+    },
+    {
+      "description": "Number of excited states requested; maps to nroots.",
+      "example": "12",
+      "name": "nstates",
+      "type": "int"
+    },
+    {
+      "description": "Restricted spin channel selector; RKS/RHF singlet cases use true, unrestricted solvers use null.",
+      "example": "true",
+      "name": "singlet",
+      "type": "bool/null"
+    },
+    {
+      "description": "Frozen orbital specification passed to TD factory.",
+      "example": "null",
+      "name": "frozen",
+      "type": "int/list/null"
+    },
+    {
+      "description": "Optional excited-state irrep filter.",
+      "example": "null",
+      "name": "wfnsym",
+      "type": "string/int/null"
+    },
+    {
+      "description": "TD residual convergence tolerance; must not be loosened.",
+      "example": "1e-5",
+      "name": "conv_tol",
+      "type": "float"
+    },
+    {
+      "description": "Linear-dependence threshold for trial vectors/subspace.",
+      "example": "1e-12",
+      "name": "lindep",
+      "type": "float"
+    },
+    {
+      "description": "Maximum TD eigensolver iterations.",
+      "example": "100",
+      "name": "max_cycle",
+      "type": "int"
+    },
+    {
+      "description": "Low positive excitation filter.",
+      "example": "1e-3",
+      "name": "positive_eig_threshold",
+      "type": "float"
+    },
+    {
+      "description": "Initial guess degeneracy threshold.",
+      "example": "1e-3",
+      "name": "deg_eia_thresh",
+      "type": "float"
+    },
+    {
+      "description": "Memory limit in MB; _lr_eig derives max_space from this.",
+      "example": "4000",
+      "name": "max_memory",
+      "type": "float"
+    },
+    {
+      "description": "Deterministic DFT grid settings used by tests and requested goal.",
+      "example": "{\"ATOM_SPECIFIC_TREUTLER_GRIDS\": false, \"grids.prune\": null}",
+      "name": "dft_grid_settings",
+      "type": "dict"
+    }
+  ],
+  "editable_paths": [
+    "pyscf/tdscf/_lr_eig.py",
+    "pyscf/tdscf/rhf.py",
+    "pyscf/tdscf/rks.py",
+    "pyscf/tdscf/uhf.py",
+    "pyscf/tdscf/uks.py",
+    "pyscf/lib/linalg_helper.py"
+  ],
+  "entry_points": [
+    {
+      "call_signature": "mol = gto.M(...); mf = dft.RKS(mol) | dft.UKS(mol) | scf.RHF(mol) | scf.UHF(mol); mf.kernel()",
+      "description": "Builds molecule and converged orbital/occupation data consumed by TDDFT/TDA response operators.",
+      "module_or_file": "pyscf.gto, pyscf.scf, pyscf.dft",
+      "name": "Ground-state SCF preparation"
+    },
+    {
+      "call_signature": "tdscf.TDA(mf, frozen=None); tdscf.TDDFT(mf, frozen=None); mf.TDA(); mf.TDDFT(); mf.CasidaTDDFT()",
+      "description": "Public API for constructing TD solvers. DFT TDDFT dispatches to hybrid TDDFT or no-hybrid CasidaTDDFT; HF TDDFT dispatches to TDHF.",
+      "module_or_file": "pyscf/tdscf/__init__.py",
+      "name": "TD object factories"
+    },
+    {
+      "call_signature": "TDA.kernel(x0=None, nstates=None)",
+      "description": "Runs TDA diagonalization through gen_vind(), get_precond(), and pyscf.tdscf._lr_eig.eigh(). RKS/UKS inherit these paths with DFT response functions.",
+      "module_or_file": "pyscf/tdscf/rhf.py, pyscf/tdscf/uhf.py",
+      "name": "TDA kernels"
+    },
+    {
+      "call_signature": "TDHF.kernel(x0=None, nstates=None); TDDFT.kernel(x0=None, nstates=None)",
+      "description": "Runs full linear-response eigenproblem. Real molecular systems use _lr_eig.real_eig(); complex systems use _lr_eig.eig().",
+      "module_or_file": "pyscf/tdscf/rhf.py, pyscf/tdscf/uhf.py",
+      "name": "Hybrid TDHF/TDDFT kernels"
+    },
+    {
+      "call_signature": "CasidaTDDFT.kernel(x0=None, nstates=None)",
+      "description": "Runs squared Casida equation via _lr_eig.eigh(), then converts w^2 roots to excitation energies and X/Y amplitudes.",
+      "module_or_file": "pyscf/tdscf/rks.py, pyscf/tdscf/uks.py",
+      "name": "No-hybrid Casida TDDFT kernels"
+    },
+    {
+      "call_signature": "eigh(aop, x0, precond, tol_residual=1e-5, lindep=1e-12, nroots=1, x0sym=None, pick=None, max_cycle=50, max_memory=MAX_MEMORY, verbose=logger.WARN); eig(...); real_eig(...)",
+      "description": "Target Davidson-style subspace solvers. They batch response applications, build projected subspace matrices, diagonalize reduced problems, precondition residuals, and return convergence flags, eigenvalues, and eigenvectors.",
+      "module_or_file": "pyscf/tdscf/_lr_eig.py",
+      "name": "Linear-response eigensolvers"
+    }
+  ],
+  "immutable_paths": [
+    "**/* outside editable_paths",
+    ".fermilink-optimize/** except .fermilink-optimize/autogen/** during this analysis turn"
+  ],
+  "language": "python",
+  "output_quantities": [
+    {
+      "description": "Excitation energies in Hartree, ordered by requested positive roots.",
+      "field": "td.e",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 5e-06
+      },
+      "type": "array"
+    },
+    {
+      "description": "Boolean convergence status per requested root; all requested roots should converge.",
+      "field": "td.converged",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "array"
+    },
+    {
+      "description": "Oscillator strengths for closed-shell singlet cases where exposed by the benchmark.",
+      "field": "td.oscillator_strength()",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0001
+      },
+      "type": "array"
+    },
+    {
+      "description": "Transition dipole vectors; compare sign-invariant norms or allow global sign flips per state.",
+      "field": "td.transition_dipole()",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0001
+      },
+      "type": "array"
+    },
+    {
+      "description": "Wall time around TD kernel only, after SCF preparation; primary optimization metric is weighted median across cases.",
+      "field": "td_kernel_wall_time_s",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Number of Davidson/subspace outer iterations if instrumented from _lr_eig debug loop.",
+      "field": "davidson_iterations",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Number of response operator calls aop/vind if instrumented; secondary performance metric.",
+      "field": "matvec_applications",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    }
+  ],
+  "package": "pyscf",
+  "runtime_command_template": [
+    "python",
+    "-c",
+    "import json, os, time; import numpy as np; from pyscf import gto, dft, scf, tdscf; p=json.loads(os.environ['CASE_JSON']); dft.radi.ATOM_SPECIFIC_TREUTLER_GRIDS=False; mol=gto.M(atom=p['atom'], basis=p['basis'], charge=p.get('charge',0), spin=p.get('spin',0), symmetry=p.get('symmetry',False), verbose=0); mf=(getattr(dft,p['scf_method'])(mol) if p['scf_method'] in ('RKS','UKS') else getattr(scf,p['scf_method'])(mol)); mf.xc=p.get('xc', getattr(mf,'xc',None)) if hasattr(mf,'xc') else None; mf.grids.prune=None if hasattr(mf,'grids') else None; mf.kernel(conv_tol=p.get('scf_conv_tol',1e-10)); td=getattr(mf,p['td_method'])(p.get('frozen',None)); td.nstates=p['nstates']; td.conv_tol=p.get('td_conv_tol',td.conv_tol); t0=time.perf_counter(); e,xy=td.kernel(); dt=time.perf_counter()-t0; osc=td.oscillator_strength().tolist() if p.get('oscillator_strength',False) else None; print(json.dumps({'e':np.asarray(e).tolist(),'converged':np.asarray(td.converged,dtype=bool).tolist(),'oscillator_strength':osc,'td_kernel_wall_time_s':dt}))"
+  ],
+  "suggested_cases": [
+    {
+      "description": "Closed-shell no-hybrid RKS Casida TDDFT benzene training case.",
+      "id": "train-rks-bp86-casida-benzene",
+      "parameters": {
+        "basis": "6-31g",
+        "geometry_source": "examples/2-benchmark/bz.py",
+        "nstates": 12,
+        "scf_method": "RKS",
+        "singlet": true,
+        "spin": 0,
+        "split_role": "train",
+        "td_method": "CasidaTDDFT",
+        "xc": "b88,p86"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Closed-shell hybrid RKS full TDDFT benzene training case.",
+      "id": "train-rks-b3lyp-tddft-benzene",
+      "parameters": {
+        "basis": "6-31g",
+        "geometry_source": "examples/2-benchmark/bz.py",
+        "nstates": 10,
+        "scf_method": "RKS",
+        "singlet": true,
+        "spin": 0,
+        "split_role": "train",
+        "td_method": "TDDFT",
+        "xc": "b3lyp5"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Open-shell no-hybrid UKS Casida TDDFT allyl radical training case.",
+      "id": "train-uks-bp86-casida-allyl",
+      "parameters": {
+        "basis": "def2-svp",
+        "geometry_source": "examples/mp/12-dfump2-natorbs.py",
+        "nstates": 8,
+        "scf_method": "UKS",
+        "spin": 1,
+        "split_role": "train",
+        "td_method": "CasidaTDDFT",
+        "xc": "b88,p86"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Larger closed-shell no-hybrid RKS Casida TDDFT benzene test case.",
+      "id": "test-rks-bp86-casida-benzene-631gss",
+      "parameters": {
+        "basis": "6-31g**",
+        "geometry_source": "examples/2-benchmark/bz.py",
+        "nstates": 12,
+        "scf_method": "RKS",
+        "singlet": true,
+        "spin": 0,
+        "split_role": "test",
+        "td_method": "CasidaTDDFT",
+        "xc": "b88,p86"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Larger closed-shell hybrid RKS full TDDFT benzene test case.",
+      "id": "test-rks-b3lyp-tddft-benzene-631gss",
+      "parameters": {
+        "basis": "6-31g**",
+        "geometry_source": "examples/2-benchmark/bz.py",
+        "nstates": 10,
+        "scf_method": "RKS",
+        "singlet": true,
+        "spin": 0,
+        "split_role": "test",
+        "td_method": "TDDFT",
+        "xc": "b3lyp5"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Larger open-shell no-hybrid UKS Casida TDDFT allyl radical test case.",
+      "id": "test-uks-bp86-casida-allyl-def2tzvp",
+      "parameters": {
+        "basis": "def2-TZVP",
+        "geometry_source": "examples/mp/12-dfump2-natorbs.py",
+        "nstates": 8,
+        "scf_method": "UKS",
+        "spin": 1,
+        "split_role": "test",
+        "td_method": "CasidaTDDFT",
+        "xc": "b88,p86"
+      },
+      "weight": 1.0
+    }
+  ],
+  "threading_model": {
+    "default_threads": 1,
+    "description": "Python control flow is serial. Heavy response, integral, XC, NumPy, and SciPy operations use compiled PySCF C extensions, OpenMP when enabled by CMake, and linked BLAS/LAPACK threading. PySCF exposes pyscf.lib.num_threads(n) for OpenMP runtime control. Benchmark runs should pin OpenMP and BLAS thread counts to 1 to avoid noise.",
+    "env_vars": [
+      "OMP_NUM_THREADS",
+      "MKL_NUM_THREADS",
+      "OPENBLAS_NUM_THREADS",
+      "BLIS_NUM_THREADS",
+      "VECLIB_MAXIMUM_THREADS"
+    ]
+  }
+}

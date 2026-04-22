@@ -1,0 +1,75 @@
+{
+  "all_files": [],
+  "all_root_rel": ".fermilink-optimize/inputs/all",
+  "case_file_map": {},
+  "files": [],
+  "goal_dir": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf",
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/python-pyscf-tddft-davidson-goal.md",
+  "goal_sha256": "1de711dbd16c69261bc5e3f29c1424bbc7aa4da7b2ac31eed505a1f16d3a1b45",
+  "missing_references": [
+    {
+      "case_id": "train-rks-bp86-casida-benzene",
+      "reference": "examples/2-benchmark/bz.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/examples/2-benchmark/bz.py"
+    },
+    {
+      "case_id": "train-rks-bp86-casida-benzene",
+      "reference": "/",
+      "resolved_source": "/"
+    },
+    {
+      "case_id": "train-rks-b3lyp-tddft-benzene",
+      "reference": "examples/2-benchmark/bz.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/examples/2-benchmark/bz.py"
+    },
+    {
+      "case_id": "train-rks-b3lyp-tddft-benzene",
+      "reference": "/",
+      "resolved_source": "/"
+    },
+    {
+      "case_id": "train-uks-bp86-casida-allyl",
+      "reference": "examples/mp/12-dfump2-natorbs.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/examples/mp/12-dfump2-natorbs.py"
+    },
+    {
+      "case_id": "train-uks-bp86-casida-allyl",
+      "reference": "/",
+      "resolved_source": "/"
+    },
+    {
+      "case_id": "test-rks-bp86-casida-benzene-631gss",
+      "reference": "examples/2-benchmark/bz.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/examples/2-benchmark/bz.py"
+    },
+    {
+      "case_id": "test-rks-bp86-casida-benzene-631gss",
+      "reference": "/",
+      "resolved_source": "/"
+    },
+    {
+      "case_id": "test-rks-b3lyp-tddft-benzene-631gss",
+      "reference": "examples/2-benchmark/bz.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/examples/2-benchmark/bz.py"
+    },
+    {
+      "case_id": "test-rks-b3lyp-tddft-benzene-631gss",
+      "reference": "/",
+      "resolved_source": "/"
+    },
+    {
+      "case_id": "test-uks-bp86-casida-allyl-def2tzvp",
+      "reference": "examples/mp/12-dfump2-natorbs.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/examples/mp/12-dfump2-natorbs.py"
+    },
+    {
+      "case_id": "test-uks-bp86-casida-allyl-def2tzvp",
+      "reference": "/",
+      "resolved_source": "/"
+    }
+  ],
+  "schema_version": 1,
+  "shared_files": [],
+  "updated_at_utc": "2026-04-21T10:27:41.734837Z",
+  "worker_root_rel": ".fermilink-optimize/inputs/worker"
+}
