@@ -2137,9 +2137,9 @@ body.mxl-landing.mxl-landing-simple .mxl-simple-hero h1 {
     linear-gradient(162deg, rgba(10, 20, 36, 0.94), rgba(8, 16, 30, 0.97));
   padding: clamp(1.8rem, 3.6vw, 2.6rem) clamp(1.6rem, 4vw, 3rem);
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   gap: clamp(1.4rem, 3vw, 2.6rem);
-  align-items: start;
+  align-items: center;
 }
 
 .po-contribute-card__head h3 {
@@ -2174,77 +2174,14 @@ body.mxl-landing.mxl-landing-simple .mxl-simple-hero h1 {
   letter-spacing: 0.1em;
 }
 
-.po-contribute-steps {
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-}
-
-.po-contribute-steps li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 0.85rem 1rem;
-  border-radius: 14px;
-  background: rgba(140, 208, 255, 0.04);
-  border: 1px solid rgba(140, 208, 255, 0.1);
-}
-
-.po-contribute-steps li > div {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  min-width: 0;
-}
-
-.po-contribute-steps strong {
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 650;
-  letter-spacing: -0.005em;
-}
-
-.po-contribute-steps span {
-  color: var(--mxl-simple-muted);
-  font-size: 0.85rem;
-  line-height: 1.5;
-}
-
-.po-contribute-steps code {
-  color: var(--mxl-simple-accent);
-  font-family: var(--mxl-code-font);
-  font-size: 0.82em;
-  background: rgba(106, 214, 255, 0.08);
-  border-radius: 4px;
-  padding: 0.05em 0.3em;
-}
-
-.po-contribute-step-num {
-  flex-shrink: 0;
-  width: 1.7rem;
-  height: 1.7rem;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.82rem;
-  color: #0a1424;
-  background: linear-gradient(140deg, #9ee4ff, var(--mxl-simple-accent-strong));
-  box-shadow: 0 4px 12px -6px rgba(35, 178, 241, 0.6);
-}
-
 .po-contribute-actions {
-  grid-column: 1;
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.7rem;
-  margin-top: 0.4rem;
+  margin-top: 0;
 }
 
 .po-contribute-btn {
@@ -2292,13 +2229,13 @@ body.mxl-landing.mxl-landing-simple .mxl-simple-hero h1 {
 @media (max-width: 820px) {
   .po-contribute-card__body {
     grid-template-columns: 1fr;
-  }
-  .po-contribute-steps {
-    grid-column: 1;
-    grid-row: auto;
+    align-items: start;
   }
   .po-contribute-actions {
     grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+    margin-top: 0.4rem;
   }
 }
 
