@@ -268,6 +268,14 @@ Rerun from the bundled :download:`goal.md <contract/goal.md>`.
       cmake -C ../cmake/presets/most.cmake -C ../cmake/presets/nolib.cmake -D PKG_GPU=off ../cmake
       cmake --build . -j4
 
+.. note::
+
+   The copied ``## Representative Workloads`` section references input files that are also bundled under ``Input files for Benchmarks``. Copy these files into the same directory as the ``goal.md`` file used for this rerun before launching FermiLink, so goal mode can capture and stage them:
+
+   - :download:`in.tip4p_nve <inputs/all/in.tip4p_nve>`
+   - :download:`in.tip4p_nve_long <inputs/all/in.tip4p_nve_long>`
+   - :download:`water_216_data.lmp <inputs/all/water_216_data.lmp>`
+
 Run this from the cloned main repo so the launcher can create or reuse the sibling worktree:
 
 .. code-block:: bash
