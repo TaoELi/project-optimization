@@ -40,6 +40,7 @@
           <a href="https://fermilink.org">Main docs</a>
           <a href="#po-packages">Runs</a>
           <a href="https://fermilink.org/optimize.html">How optimize works</a>
+          <a href="#po-contribute" class="mxl-simple-nav-cta">Contribute</a>
         </nav>
       </header>
 
@@ -56,7 +57,9 @@
               <br/>make scientific code faster.
             </h1>
             <p class="mxl-simple-lead">
-              Stored records of optimization runs on real scientific codebases using <b>FermiLink</b>.
+              Experimental records of optimization runs for <b>FermiLink</b> collaborators.
+              <br/>
+              <span class="mxl-simple-lead-note">Review and validate the code changes yourself before using the modified code in scientific or production work.</span>
             </p>
             <div class="mxl-simple-actions">
               <a class="mxl-simple-btn mxl-simple-btn--primary" href="#po-packages">
@@ -158,6 +161,71 @@
               <code>source/entries/&lt;package&gt;/&lt;task&gt;/</code>.
             </p>
             {% endif %}
+          </section>
+
+          {# ── Contribute card ── #}
+          <section id="po-contribute" class="po-contribute-section" aria-label="Contribute a run">
+            <div class="po-contribute-card">
+              <div class="po-contribute-card__glow" aria-hidden="true"></div>
+              <div class="po-contribute-card__body">
+                <div class="po-contribute-card__head">
+                  <span class="po-contribute-badge">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                    Open collaboration
+                  </span>
+                  <h3>Contribute a new optimization run</h3>
+                  <p>
+                    Have a <b>FermiLink</b> optimization run worth sharing? Please fork the repo,
+                    run the provided script to drop in your bundle, and open a pull request, so the community can review and learn from your work!
+                  </p>
+                </div>
+
+                <ol class="po-contribute-steps">
+                  <li>
+                    <span class="po-contribute-step-num">1</span>
+                    <div>
+                      <strong>Fork &amp; clone</strong>
+                      <span>Fork <code>TaoELi/project-optimization</code> on GitHub and clone your fork locally.</span>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="po-contribute-step-num">2</span>
+                    <div>
+                      <strong>Compile your run</strong>
+                      <span>Follow the repo <code>README.md</code> to package your <code>.fermilink-optimize</code> workspace into an entry bundle.</span>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="po-contribute-step-num">3</span>
+                    <div>
+                      <strong>Open a pull request</strong>
+                      <span>Push the new <code>source/entries/&lt;package&gt;/&lt;task&gt;/</code> bundle and submit a PR for review.</span>
+                    </div>
+                  </li>
+                </ol>
+
+                <div class="po-contribute-actions">
+                  <a class="po-contribute-btn po-contribute-btn--primary"
+                     href="https://github.com/TaoELi/project-optimization"
+                     target="_blank" rel="noopener noreferrer">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                      <path d="M12 .5C5.73.5.67 5.56.67 11.84c0 5.02 3.25 9.27 7.76 10.77.57.1.78-.25.78-.55 0-.27-.01-1.17-.02-2.13-3.16.69-3.82-1.34-3.82-1.34-.52-1.31-1.26-1.66-1.26-1.66-1.03-.7.08-.69.08-.69 1.14.08 1.74 1.17 1.74 1.17 1.01 1.74 2.66 1.24 3.31.95.1-.73.4-1.24.72-1.52-2.52-.29-5.18-1.26-5.18-5.62 0-1.24.44-2.25 1.17-3.04-.12-.29-.51-1.45.11-3.02 0 0 .96-.31 3.14 1.16a10.9 10.9 0 0 1 2.86-.38c.97 0 1.95.13 2.86.38 2.18-1.47 3.14-1.16 3.14-1.16.62 1.57.23 2.73.11 3.02.73.79 1.17 1.8 1.17 3.04 0 4.37-2.66 5.33-5.19 5.61.41.35.77 1.05.77 2.12 0 1.53-.01 2.77-.01 3.15 0 .3.2.66.79.55 4.5-1.5 7.75-5.75 7.75-10.77C23.33 5.56 18.27.5 12 .5z"/>
+                    </svg>
+                    View on GitHub
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                      <path d="M6 3l5 5-5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                  </a>
+                  <a class="po-contribute-btn"
+                     href="https://github.com/TaoELi/project-optimization/blob/main/README.md"
+                     target="_blank" rel="noopener noreferrer">
+                    Read the README
+                  </a>
+                </div>
+              </div>
+            </div>
           </section>
 
           {# ── Footer ── #}
