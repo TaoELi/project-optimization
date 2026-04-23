@@ -26,6 +26,7 @@ PACKAGES_DIR = SOURCE / "packages"
 # --- Project info ---
 project = "FermiLink Project Optimization"
 author = "Tao E. Li"
+copyright = "TEL Research Group 2026"
 release = version = datetime.now().strftime("%Y.%m.%d")
 html_title = "FermiLink · Project Optimization"
 html_short_title = "Project Optimization"

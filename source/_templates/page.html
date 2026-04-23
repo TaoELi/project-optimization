@@ -53,7 +53,7 @@
               Optimization Gallery
             </p>
             <h1>
-              Watch <code style="background:rgba(106,214,255,0.15);border-radius:6px;padding:0.1em 0.35em;font-family:var(--mxl-code-font);">fermilink optimize</code>
+              <span class="mxl-simple-title-command">Watch <code style="background:rgba(106,214,255,0.15);border-radius:6px;padding:0.1em 0.35em;font-family:var(--mxl-code-font);">fermilink optimize</code></span>
               <br/>make scientific code faster.
             </h1>
             <p class="mxl-simple-lead">
@@ -207,7 +207,10 @@
           {# ── Footer ── #}
           <footer class="mxl-landing-foot">
             <div class="mxl-landing-foot__inner">
-              <span class="mxl-landing-foot__brand">FermiLink &middot; Project Optimization</span>
+              <div class="mxl-landing-foot__meta">
+                <span class="mxl-landing-foot__brand">FermiLink &middot; Project Optimization</span>
+                <span class="mxl-landing-foot__copyright">Copyright &copy; {{ copyright }}</span>
+              </div>
               <nav class="mxl-landing-foot__links" aria-label="Footer links">
                 <a href="https://fermilink.org">Main docs</a>
                 <a href="https://fermilink.org/quickstart.html">Quickstart</a>
@@ -297,3 +300,61 @@
     {{ super() }}
   {% endif %}
 {% endblock %}
+
+{% block footer %}
+  {% if pagename != "index" %}
+    <div class="related-pages">
+      {% if next -%}
+        <a class="next-page" href="{{ next.link }}">
+          <div class="page-info">
+            <div class="context">
+              <span>{{ _("Next") }}</span>
+            </div>
+            <div class="title">{{ next.title }}</div>
+          </div>
+          <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+        </a>
+      {%- endif %}
+      {% if prev -%}
+        <a class="prev-page" href="{{ prev.link }}">
+          <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+          <div class="page-info">
+            <div class="context">
+              <span>{{ _("Previous") }}</span>
+            </div>
+            {% if prev.link == pathto(master_doc) %}
+              <div class="title">{{ _("Home") }}</div>
+            {% else %}
+              <div class="title">{{ prev.title }}</div>
+            {% endif %}
+          </div>
+        </a>
+      {%- endif %}
+    </div>
+    <div class="bottom-of-page">
+      <div class="left-details">
+        {%- if show_copyright %}
+          <div class="copyright">Copyright &copy; {{ copyright }}</div>
+        {%- endif %}
+        {%- if last_updated %}
+          <div class="last-updated">
+            {% trans last_updated=last_updated|e -%}
+              Last updated on {{ last_updated }}
+            {%- endtrans %}
+          </div>
+        {%- endif %}
+      </div>
+      <div class="right-details">
+        {% if theme_footer_icons -%}
+          <div class="icons">
+            {% for icon_dict in theme_footer_icons -%}
+              <a class="muted-link {{ icon_dict.class }}" href="{{ icon_dict.url }}" aria-label="{{ icon_dict.name }}">
+                {{- icon_dict.html -}}
+              </a>
+            {%- endfor %}
+          </div>
+        {%- endif %}
+      </div>
+    </div>
+  {% endif %}
+{% endblock footer %}
