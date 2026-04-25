@@ -65,7 +65,7 @@ Copied source goal for this optimization: :download:`goal.md <contract/goal.md>`
    ## Build
    ```bash
    export SOURCE_REPO_ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
-   export VENV="$SOURCE_REPO_ROOT/../venvs/fermilink-optimize/pyscf-davidson"
+   export VENV="/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/venvs/fermilink-optimize/pyscf-davidson"
    source "$VENV/bin/activate"
    module remove cmake
    cd pyscf/lib
@@ -241,7 +241,7 @@ Rerun from the bundled :download:`goal.md <contract/goal.md>`.
    .. code-block:: bash
 
       export SOURCE_REPO_ROOT="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
-      export VENV="$SOURCE_REPO_ROOT/../venvs/fermilink-optimize/pyscf-davidson"
+      export VENV="/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/venvs/fermilink-optimize/pyscf-davidson"
       source "$VENV/bin/activate"
       module remove cmake
       cd pyscf/lib
