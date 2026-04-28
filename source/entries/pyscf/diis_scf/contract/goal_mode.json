@@ -1,0 +1,27 @@
+{
+  "analysis_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf/.fermilink-optimize/autogen/goal_analysis.json",
+  "benchmark_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf/.fermilink-optimize/autogen/benchmark.yaml",
+  "created_at_utc": "2026-04-26T19:38:54.957409Z",
+  "created_files": {
+    "analysis": true,
+    "benchmark": true,
+    "goal_markdown": true,
+    "run_script": true,
+    "runner": true,
+    "setup": true,
+    "submit_launcher": true
+  },
+  "goal_copy_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf/.fermilink-optimize/autogen/goal.md",
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/python-pyscf-diis-scf-goal.md",
+  "goal_sha256": "d736808ae7b3226fdeaa80d48b1c5c0155d26791322ab91999924521a9d6bca7",
+  "language": "python",
+  "mode": "goal",
+  "package_id": "pyscf",
+  "project_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf",
+  "review_notes": "The workload id `test-rks-benzene-anion-diffuse` is labeled RKS but its stated charge/spin and method say UKS; keep the id only if that mismatch is intentional for campaign bookkeeping. DIIS changes need extra care around `mf.diis` as a user-supplied object, HDF5 restore files, rollback semantics, and symmetry-adapted error-vector masking. Benchmark runners should set thread env vars before importing PySCF; otherwise `lib.num_threads(1)` may also be needed to force OpenMP to one thread.\n- Wrote `.fermilink-optimize/autogen/benchmark.yaml` and `.fermilink-optimize/autogen/benchmark_runner.py`.\n- Validated YAML parsing and runner syntax with the pinned interpreter. I did not run the full DFT workload suite because it is intentionally expensive.\n- Verify the explicit virtualenv path exists on all benchmark workers.\n- The YAML uses a single `e_tot` tolerance of `1.0e-7`; if the controller supports case-conditional tolerances, tighten RKS energy checks to `5.0e-8`.",
+  "run_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf/.fermilink-optimize/autogen/run_optimize.sh",
+  "runner_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf/.fermilink-optimize/autogen/benchmark_runner.py",
+  "schema_version": 1,
+  "setup_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf/.fermilink-optimize/autogen/setup_env.sh",
+  "submit_launcher_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/pyscf-diis_scf/.fermilink-optimize/autogen/submit_poll_launcher.py"
+}

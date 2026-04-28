@@ -1,0 +1,438 @@
+{
+  "build_system": {
+    "build_command": "source /anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/venvs/fermilink-optimize/pyscf-casscf/bin/activate && cd pyscf/lib && mkdir -p build && cd build && cmake .. && cmake --build . -j4",
+    "install_command": "python -m pip install -e .",
+    "type": "pip+cmake"
+  },
+  "configuration_parameters": [
+    {
+      "description": "Molecular geometry passed to gto.M or Mole.build.",
+      "example": "benzene atom block from examples/mcscf/17-approx_orbital_hessian.py",
+      "name": "atom",
+      "type": "string|list"
+    },
+    {
+      "description": "AO basis set.",
+      "example": "6-31g or ccpvtz",
+      "name": "basis",
+      "type": "string|dict"
+    },
+    {
+      "description": "Molecular charge.",
+      "example": 0,
+      "name": "charge",
+      "type": "int"
+    },
+    {
+      "description": "2S value used by PySCF Mole.",
+      "example": 0,
+      "name": "spin",
+      "type": "int"
+    },
+    {
+      "description": "Whether to use point-group symmetry.",
+      "example": true,
+      "name": "symmetry",
+      "type": "bool|string"
+    },
+    {
+      "description": "Mean-field reference used before CASSCF.",
+      "example": "RHF",
+      "name": "mf_type",
+      "type": "string"
+    },
+    {
+      "description": "Number of active orbitals.",
+      "example": 6,
+      "name": "ncas",
+      "type": "int"
+    },
+    {
+      "description": "Active electrons or alpha/beta active electrons.",
+      "example": 6,
+      "name": "nelecas",
+      "type": "int|tuple"
+    },
+    {
+      "description": "1-based active orbital indices passed to sort_mo/sort_mo_by_irrep.",
+      "example": [
+        17,
+        20,
+        21,
+        22,
+        23,
+        30
+      ],
+      "name": "active_orbital_sort",
+      "type": "array|null"
+    },
+    {
+      "description": "Selected CASSCF path.",
+      "example": "newton|mc1step|mc2step|approx_hessian",
+      "name": "solver_family",
+      "type": "string"
+    },
+    {
+      "description": "State-average weights.",
+      "example": [
+        0.5,
+        0.5
+      ],
+      "name": "state_weights",
+      "type": "array|null"
+    },
+    {
+      "description": "State-specific root index.",
+      "example": 1,
+      "name": "target_root",
+      "type": "int|null"
+    },
+    {
+      "description": "FCI wavefunction symmetry label.",
+      "example": "A1",
+      "name": "wfnsym",
+      "type": "string|int|null"
+    },
+    {
+      "description": "CASSCF energy convergence threshold.",
+      "example": 1e-07,
+      "name": "conv_tol",
+      "type": "float"
+    },
+    {
+      "description": "CASSCF orbital/CI gradient threshold; defaults to sqrt(conv_tol).",
+      "example": null,
+      "name": "conv_tol_grad",
+      "type": "float|null"
+    },
+    {
+      "description": "Maximum macroiterations.",
+      "example": 50,
+      "name": "max_cycle_macro",
+      "type": "int"
+    },
+    {
+      "description": "Maximum microiterations per macroiteration.",
+      "example": 10,
+      "name": "max_cycle_micro",
+      "type": "int"
+    },
+    {
+      "description": "Maximum orbital rotation/CI increment size.",
+      "example": 0.03,
+      "name": "max_stepsize",
+      "type": "float"
+    },
+    {
+      "description": "AH Davidson preconditioner level shift.",
+      "example": 1e-08,
+      "name": "ah_level_shift",
+      "type": "float"
+    },
+    {
+      "description": "AH Davidson convergence threshold.",
+      "example": 1e-12,
+      "name": "ah_conv_tol",
+      "type": "float"
+    },
+    {
+      "description": "AH subspace linear-dependence threshold.",
+      "example": 1e-14,
+      "name": "ah_lindep",
+      "type": "float"
+    },
+    {
+      "description": "Residual threshold for accepting early AH steps.",
+      "example": 500.0,
+      "name": "ah_start_tol",
+      "type": "float"
+    },
+    {
+      "description": "Minimum AH cycles before early AH step acceptance.",
+      "example": 3,
+      "name": "ah_start_cycle",
+      "type": "int"
+    }
+  ],
+  "editable_paths": [
+    "pyscf/mcscf/newton_casscf.py",
+    "pyscf/mcscf/newton_casscf_symm.py",
+    "pyscf/mcscf/mc1step.py",
+    "pyscf/mcscf/mc1step_symm.py",
+    "pyscf/mcscf/addons.py",
+    "pyscf/mcscf/casci.py",
+    "pyscf/soscf/ciah.py",
+    "pyscf/lib/linalg_helper.py"
+  ],
+  "entry_points": [
+    {
+      "call_signature": "mcscf.CASSCF(mf_or_mol, ncas, nelecas, ncore=None, frozen=None)",
+      "description": "Factory for RHF/ROHF-based CASSCF; selects symmetry-adapted or non-symmetry CASSCF and DF variants as needed.",
+      "module_or_file": "pyscf/mcscf/__init__.py",
+      "name": "mcscf.CASSCF"
+    },
+    {
+      "call_signature": "mc.kernel(mo_coeff=None, ci0=None, callback=None); mc.mc1step(mo_coeff=None, ci0=None, callback=None)",
+      "description": "Primary one-step CASSCF macro/micro optimizer using orbital AH/CIAH updates, approximate CI response, CASCI refreshes, checkpointing, and callbacks.",
+      "module_or_file": "pyscf/mcscf/mc1step.py",
+      "name": "CASSCF.kernel / mc1step"
+    },
+    {
+      "call_signature": "mc.mc2step(mo_coeff=None, ci0=None, callback=None)",
+      "description": "Two-step CASSCF driver; alternates orbital optimization and CASCI solves with one micro pass per macro step.",
+      "module_or_file": "pyscf/mcscf/mc2step.py",
+      "name": "CASSCF.mc2step"
+    },
+    {
+      "call_signature": "mc.newton().kernel(mo_coeff=None, ci0=None, callback=None)",
+      "description": "Second-order CASSCF driver optimizing orbital rotations and CI coefficients together through matrix-free augmented-Hessian Davidson iterations.",
+      "module_or_file": "pyscf/mcscf/newton_casscf.py",
+      "name": "CASSCF.newton().kernel"
+    },
+    {
+      "call_signature": "mcscf.CASCI(mf, ncas, nelecas).kernel(mo_coeff=None, ci0=None, verbose=None)",
+      "description": "Builds active-space Hamiltonian from orbitals, runs the configured FCI solver, and returns total/CAS energy and CI coefficients.",
+      "module_or_file": "pyscf/mcscf/casci.py",
+      "name": "CASCI.kernel"
+    },
+    {
+      "call_signature": "davidson_cc(h_op, g_op, precond, x0, tol=1e-10, max_cycle=30, lindep=1e-14, dot=numpy.dot, verbose=logger.WARN)",
+      "description": "Internal augmented-Hessian Davidson generator used by CASSCF orbital/CIAH updates.",
+      "module_or_file": "pyscf/soscf/ciah.py",
+      "name": "ciah.davidson_cc"
+    }
+  ],
+  "immutable_paths": [
+    "all repository paths outside editable_paths",
+    "pyscf/mcscf/test/**",
+    "examples/**",
+    "pyscf/lib/** C sources and CMake files unless explicitly in editable_paths",
+    ".fermilink-optimize/** except .fermilink-optimize/autogen/**"
+  ],
+  "language": "python",
+  "output_quantities": [
+    {
+      "description": "Boolean convergence flag on the MCSCF/CASCI object.",
+      "field": "converged",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Final total CASSCF/CASCI energy including nuclear repulsion.",
+      "field": "e_tot",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 5e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Final active-space CI energy contribution.",
+      "field": "e_cas",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 5e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Per-state energies for state-averaged or multi-root runs.",
+      "field": "e_states",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 5e-06
+      },
+      "type": "array"
+    },
+    {
+      "description": "Final orbital-gradient norm exposed through callbacks or recomputed via get_grad.",
+      "field": "norm_gorb",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0001
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Final CI-gradient norm when the runner can expose it.",
+      "field": "norm_gci",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0001
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Overlap-based root identity diagnostics for state-specific or state-averaged cases.",
+      "field": "root_overlap",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-06
+      },
+      "type": "array"
+    },
+    {
+      "description": "Wall time measured only around the selected CASSCF call.",
+      "field": "casscf_kernel_seconds",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Number of CASSCF macroiterations.",
+      "field": "macro_cycles",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Total AH/CIAH or orbital microiterations.",
+      "field": "micro_cycles",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Total Hessian-vector/AH operator calls, visible in Newton logs/callback state as Hx or JK counts.",
+      "field": "h_op_calls",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    }
+  ],
+  "package": "pyscf",
+  "runtime_command_template": [
+    "python",
+    "-c",
+    "from pyscf import gto, scf, mcscf; mol=gto.M(atom=ATOM,basis=BASIS,charge=CHARGE,spin=SPIN,symmetry=SYMMETRY,verbose=0); mf=scf.RHF(mol).run(conv_tol=MF_CONV_TOL); mc=mcscf.CASSCF(mf,NCAS,NELECAS); mo=mc.sort_mo(CASLIST) if CASLIST else mf.mo_coeff; solver=mc.newton() if SOLVER=='newton' else mc; out=solver.mc2step(mo) if SOLVER=='mc2step' else solver.kernel(mo); print({'e_tot': out[0], 'converged': solver.converged})"
+  ],
+  "suggested_cases": [
+    {
+      "description": "Goal workload: benzene pi CAS(6,6), symmetry enabled, Newton-CASSCF matrix-free AH/CIAH path.",
+      "id": "train-newton-benzene-6-31g-cas66-pi-sort",
+      "parameters": {
+        "active_orbital_sort": [
+          17,
+          20,
+          21,
+          22,
+          23,
+          30
+        ],
+        "basis": "6-31g",
+        "mf_type": "RHF",
+        "ncas": 6,
+        "nelecas": 6,
+        "solver_family": "newton",
+        "symmetry": true
+      },
+      "weight": 3.0
+    },
+    {
+      "description": "Goal test workload: same benzene active space with larger AO/virtual space.",
+      "id": "test-newton-benzene-ccpvtz-cas66-pi-sort",
+      "parameters": {
+        "active_orbital_sort": [
+          17,
+          20,
+          21,
+          22,
+          23,
+          30
+        ],
+        "basis": "ccpvtz",
+        "mf_type": "RHF",
+        "ncas": 6,
+        "nelecas": 6,
+        "solver_family": "newton",
+        "symmetry": true
+      },
+      "weight": 3.0
+    },
+    {
+      "description": "Symmetry-enabled N2 CAS(6,6) Newton-CASSCF regression from mcscf tests.",
+      "id": "regression-n2-ccpvdz-cas66-newton-symm",
+      "parameters": {
+        "atom": "N 0 0 -0.7; N 0 0 0.7",
+        "basis": "ccpvdz",
+        "mf_type": "RHF",
+        "ncas": 6,
+        "nelecas": 6,
+        "solver_family": "newton",
+        "symmetry": true
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "State-averaged H2O CAS(4,4) Newton case stressing multi-root/root-identity handling.",
+      "id": "regression-h2o-631g-sa4-newton",
+      "parameters": {
+        "active_orbital_sort": [
+          4,
+          5,
+          6,
+          10
+        ],
+        "atom": "O 0 0 0; H 0 -0.757 0.587; H 0 0.757 0.587",
+        "basis": "631g",
+        "mf_type": "RHF",
+        "ncas": 4,
+        "nelecas": 4,
+        "solver_family": "newton_state_average_mix",
+        "state_weights": [
+          0.25,
+          0.25,
+          0.25,
+          0.25
+        ],
+        "symmetry": true
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Existing benzene test with larger active space, useful for mc1step macro/micro behavior.",
+      "id": "regression-benzene-6-31g-cas98-mc1step",
+      "parameters": {
+        "active_orbital_sort": [
+          16,
+          17,
+          20,
+          21,
+          22,
+          23,
+          26,
+          27,
+          30
+        ],
+        "basis": "6-31g",
+        "mf_type": "RHF",
+        "ncas": 9,
+        "nelecas": 8,
+        "solver_family": "mc1step",
+        "symmetry": false
+      },
+      "weight": 0.75
+    }
+  ],
+  "threading_model": {
+    "default_threads": 16,
+    "description": "Python orchestration over NumPy/SciPy BLAS plus PySCF C extensions. CMake builds C extensions with OpenMP when available; PySCF exposes lib.num_threads()/with_omp_threads for OpenMP control. For this campaign, use OpenMP parallelism in PySCF and keep BLAS/NumExpr single-threaded for deterministic timing.",
+    "env_vars": [
+      "OMP_NUM_THREADS",
+      "OPENBLAS_NUM_THREADS",
+      "MKL_NUM_THREADS",
+      "NUMEXPR_NUM_THREADS"
+    ]
+  }
+}

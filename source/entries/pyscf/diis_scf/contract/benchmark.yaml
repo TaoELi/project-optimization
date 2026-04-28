@@ -1,0 +1,201 @@
+schema_version: 1
+benchmark_id: pyscf-diis-scf-kernel-v1
+package_id: pyscf
+goal_context:
+  target: Optimize the molecular Kohn-Sham DFT SCF loop in PySCF, focused on DIIS-family
+    acceleration and early-cycle stabilization in the conventional mf.kernel() path
+    for shared molecular RKS/UKS workloads.
+  initial_hypothesis: Start by improving CDIIS subspace conditioning and rejection
+    or rollback behavior, then tune early CDIIS/ADIIS/EDIIS handoff logic to reduce
+    oscillatory cycles without changing public SCF controls or convergence thresholds.
+  intent_level: guidance
+repo:
+  editable_paths:
+  - pyscf/lib/diis.py
+  - pyscf/scf/diis.py
+  - pyscf/scf/hf.py
+  - pyscf/scf/uhf.py
+  - pyscf/dft/rks.py
+  - pyscf/dft/uks.py
+  immutable_paths:
+  - .fermilink-optimize/**
+  - skills/**
+  - tests/**
+  - test/**
+  - examples/**
+  - setup.py
+  - pyproject.toml
+  - pyscf/lib/CMakeLists.txt
+campaign:
+  max_iterations: 120
+  stop_on_consecutive_rejections: 30
+worker:
+  max_iterations: 8
+  wait_seconds: 1
+controller:
+  timeout_seconds: 9000
+  warmup_runs: 1
+  measured_runs: 3
+  objective:
+    primary_metric: weighted_median_scf_kernel_seconds
+    direction: minimize
+    min_relative_improvement: 0.02
+  reject_on:
+  - crash
+  - timeout
+  - missing_metrics
+  - correctness_failure
+correctness:
+  mode: field_tolerances
+  field_tolerances:
+  - field: converged
+    type: scalar
+    abs_delta: 0
+  - field: e_tot
+    type: scalar
+    abs_delta: 1.0e-07
+  - field: norm_gorb
+    type: scalar
+    abs_delta: 3.162277660168379e-05
+  - field: mo_energy_window
+    type: array
+    rms_delta: 2.0e-05
+  - field: density_matrix
+    type: array
+    rms_delta: 2.0e-06
+runtime:
+  mode: direct
+  command:
+  - python
+  - .fermilink-optimize/autogen/benchmark_runner.py
+  - --benchmark
+  - '{benchmark}'
+  - --emit-json
+  env:
+    OMP_NUM_THREADS: '1'
+    MKL_NUM_THREADS: '1'
+    OPENBLAS_NUM_THREADS: '1'
+    NUMEXPR_NUM_THREADS: '1'
+    PYTHONHASHSEED: '0'
+    FERMILINK_GOAL_INPUT_ROOT: /anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf
+  pre_commands:
+  - - bash
+    - -lc
+    - 'set -euo pipefail
+
+      SOURCE_REPO_ROOT="${SOURCE_REPO_ROOT:-$(git rev-parse --show-toplevel)}"
+
+      if command -v module >/dev/null 2>&1; then module remove cmake || true;
+      fi
+
+      cd "$SOURCE_REPO_ROOT/pyscf/lib"
+
+      mkdir -p build
+
+      cd build
+
+      cmake ..
+
+      cmake --build . -j4
+
+      cd "$SOURCE_REPO_ROOT"
+
+      python -m pip install -e .
+
+      '
+cases:
+- id: train-rks-h4-square
+  weight: 1.0
+  description: Small closed-shell square H4 RKS hybrid case stressing early-cycle
+    stabilization.
+  atom: H 0 0 0; H 1.70 0 0; H 0 1.70 0; H 1.70 1.70 0
+  unit: Angstrom
+  basis: cc-pVDZ
+  charge: 0
+  spin: 0
+  method: RKS
+  xc: pbe0
+  grids_level: 3
+  init_guess: minao
+  conv_tol: 1.0e-09
+  max_cycle: 80
+  diis_space: 8
+- id: train-rks-stretched-n2
+  weight: 1.0
+  description: Closed-shell stretched N2 RKS B3LYP case with difficult SCF convergence.
+  atom: N 0 0 0; N 0 0 2.40
+  unit: Angstrom
+  basis: def2-SVP
+  charge: 0
+  spin: 0
+  method: RKS
+  xc: b3lyp
+  grids_level: 3
+  init_guess: minao
+  conv_tol: 1.0e-09
+  max_cycle: 80
+  diis_space: 8
+- id: test-uks-no2-radical
+  weight: 1.0
+  description: Open-shell bent NO2 radical UKS case covering spin-polarized DFT and
+    hybrid-GGA path.
+  atom: N 0 0 0; O 1.104605 0 0.468877; O -1.104605 0 0.468877
+  unit: Angstrom
+  basis: 6-31g*
+  charge: 0
+  spin: 1
+  method: UKS
+  xc: b3lyp
+  grids_level: 3
+  init_guess: minao
+  conv_tol: 1.0e-09
+  max_cycle: 80
+  diis_space: 8
+- id: test-uks-feo
+  weight: 1.0
+  description: High-spin transition-metal UKS hybrid case for hard oscillatory convergence.
+  atom: Fe 0 0 0; O 0 0 1.62
+  unit: Angstrom
+  basis: def2-SVP
+  charge: 0
+  spin: 4
+  method: UKS
+  xc: pbe0
+  grids_level: 3
+  init_guess: atom
+  conv_tol: 1.0e-08
+  max_cycle: 100
+  diis_space: 10
+- id: test-rks-h6-ring
+  weight: 1.0
+  description: Closed-shell H6 regular hexagon RKS hybrid case covering near-degenerate
+    occupied/virtual structure.
+  atom: H 1.45 0 0; H 0.725 1.255737 0; H -0.725 1.255737 0; H -1.45 0 0; H -0.725
+    -1.255737 0; H 0.725 -1.255737 0
+  unit: Angstrom
+  basis: cc-pVDZ
+  charge: 0
+  spin: 0
+  method: RKS
+  xc: pbe0
+  grids_level: 3
+  init_guess: minao
+  conv_tol: 1.0e-09
+  max_cycle: 80
+  diis_space: 8
+- id: test-uks-o2-dimer
+  weight: 1.0
+  description: High-spin separated O2 dimer UKS pure-GGA case using atom guess and
+    larger DIIS space.
+  atom: O -0.605 0 -1.60; O 0.605 0 -1.60; O -0.605 0 1.60; O 0.605 0 1.60
+  unit: Angstrom
+  basis: def2-SVP
+  charge: 0
+  spin: 4
+  method: UKS
+  xc: pbe
+  grids_level: 3
+  init_guess: atom
+  conv_tol: 1.0e-08
+  max_cycle: 100
+  diis_space: 10

@@ -1,0 +1,437 @@
+{
+  "build_system": {
+    "build_command": "cd pyscf/lib && mkdir -p build && cd build && cmake .. && cmake --build . -j4",
+    "install_command": "python -m pip install -e .",
+    "type": "setuptools+cmake+pip"
+  },
+  "configuration_parameters": [
+    {
+      "description": "Molecular geometry passed to gto.M or Mole.atom.",
+      "example": "H 0 0 0; H 1.70 0 0; H 0 1.70 0; H 1.70 1.70 0",
+      "name": "atom",
+      "type": "string|list"
+    },
+    {
+      "description": "Geometry unit for atom coordinates.",
+      "example": "Angstrom",
+      "name": "unit",
+      "type": "string"
+    },
+    {
+      "description": "Gaussian basis set.",
+      "example": "def2-SVP",
+      "name": "basis",
+      "type": "string|dict"
+    },
+    {
+      "description": "Molecular charge.",
+      "example": "0",
+      "name": "charge",
+      "type": "int"
+    },
+    {
+      "description": "2S value, used by PySCF to determine alpha/beta electron counts.",
+      "example": "1",
+      "name": "spin",
+      "type": "int"
+    },
+    {
+      "description": "Mean-field class for the workload.",
+      "example": "RKS or UKS",
+      "name": "method",
+      "type": "string"
+    },
+    {
+      "description": "DFT exchange-correlation functional.",
+      "example": "b3lyp",
+      "name": "xc",
+      "type": "string"
+    },
+    {
+      "description": "DFT integration grid level.",
+      "example": "3",
+      "name": "grids.level",
+      "type": "int"
+    },
+    {
+      "description": "Initial density guess method.",
+      "example": "minao",
+      "name": "init_guess",
+      "type": "string"
+    },
+    {
+      "description": "SCF energy convergence threshold.",
+      "example": "1e-9",
+      "name": "conv_tol",
+      "type": "float"
+    },
+    {
+      "description": "SCF orbital-gradient convergence threshold. If None, PySCF uses sqrt(conv_tol).",
+      "example": "None",
+      "name": "conv_tol_grad",
+      "type": "float|null"
+    },
+    {
+      "description": "Maximum SCF cycles.",
+      "example": "80",
+      "name": "max_cycle",
+      "type": "int"
+    },
+    {
+      "description": "Whether to use DIIS, or a preconstructed/restored DIIS object.",
+      "example": "True",
+      "name": "diis",
+      "type": "bool|DIIS object"
+    },
+    {
+      "description": "DIIS class used to create a DIIS object when mf.diis is truthy.",
+      "example": "pyscf.scf.diis.CDIIS",
+      "name": "DIIS",
+      "type": "class"
+    },
+    {
+      "description": "Maximum number of Fock/error vectors in the DIIS subspace.",
+      "example": "8",
+      "name": "diis_space",
+      "type": "int"
+    },
+    {
+      "description": "First SCF cycle eligible for DIIS update.",
+      "example": "1",
+      "name": "diis_start_cycle",
+      "type": "int"
+    },
+    {
+      "description": "CDIIS rollback size when the subspace reaches diis_space.",
+      "example": "0",
+      "name": "diis_space_rollback",
+      "type": "int"
+    },
+    {
+      "description": "Damping factor applied inside CDIIS update when a previous Fock is available.",
+      "example": "0.0",
+      "name": "diis_damp",
+      "type": "float"
+    },
+    {
+      "description": "Early-cycle Fock damping before DIIS starts; UHF accepts spin-resolved values.",
+      "example": "0.0",
+      "name": "damp",
+      "type": "float|tuple"
+    },
+    {
+      "description": "Virtual-space level shift applied after DIIS; UHF accepts spin-resolved values.",
+      "example": "0.0",
+      "name": "level_shift",
+      "type": "float|tuple"
+    },
+    {
+      "description": "Whether to use direct SCF with incremental J/K updates when available.",
+      "example": "True",
+      "name": "direct_scf",
+      "type": "bool"
+    },
+    {
+      "description": "Molecular symmetry option; affects constructor dispatch and DIIS orthogonal-basis symmetry masking.",
+      "example": "False",
+      "name": "symmetry",
+      "type": "bool"
+    }
+  ],
+  "editable_paths": [
+    "pyscf/lib/diis.py",
+    "pyscf/scf/diis.py",
+    "pyscf/scf/hf.py",
+    "pyscf/scf/uhf.py",
+    "pyscf/dft/rks.py",
+    "pyscf/dft/uks.py"
+  ],
+  "entry_points": [
+    {
+      "call_signature": "mf.kernel(dm0=None, **kwargs) -> float",
+      "description": "Primary public API for SCF calculations. SCF.scf dumps flags, builds the object, calls pyscf.scf.hf.kernel, stores mf.converged, mf.e_tot, mf.mo_energy, mf.mo_coeff, mf.mo_occ, and mf.cycles, then returns total energy.",
+      "module_or_file": "pyscf/scf/hf.py",
+      "name": "SCF.kernel / SCF.scf"
+    },
+    {
+      "call_signature": "kernel(mf, conv_tol=1e-10, conv_tol_grad=None, dump_chk=True, dm0=None, callback=None, conv_check=True, **kwargs) -> (converged, e_tot, mo_energy, mo_coeff, mo_occ)",
+      "description": "Generic molecular SCF loop. It builds the initial density, hcore, overlap, Veff, creates or reuses DIIS, then iterates get_fock, eig, get_occ, make_rdm1, get_veff, energy_tot, and convergence checks.",
+      "module_or_file": "pyscf/scf/hf.py",
+      "name": "pyscf.scf.hf.kernel"
+    },
+    {
+      "call_signature": "dft.RKS(mol, xc='LDA,VWN'), dft.UKS(mol, xc='LDA,VWN'), scf.RKS(mol, *args, **kwargs), scf.UKS(mol, *args, **kwargs)",
+      "description": "Molecular DFT entry classes. RKS inherits KohnShamDFT and hf.RHF; UKS inherits KohnShamDFT and uhf.UHF. scf.RKS and scf.UKS delegate to dft constructors.",
+      "module_or_file": "pyscf/dft/__init__.py, pyscf/dft/rks.py, pyscf/dft/uks.py, pyscf/scf/__init__.py",
+      "name": "RKS / UKS constructors"
+    },
+    {
+      "call_signature": "get_fock(mf, h1e=None, s1e=None, vhf=None, dm=None, cycle=-1, diis=None, diis_start_cycle=None, level_shift_factor=None, damp_factor=None, fock_last=None)",
+      "description": "Builds hcore + Veff, applies early-cycle damping before DIIS starts, calls DIIS update when cycle >= diis_start_cycle, then applies level shift. UHF variant handles alpha and beta Fock matrices.",
+      "module_or_file": "pyscf/scf/hf.py, pyscf/scf/uhf.py",
+      "name": "SCF.get_fock"
+    },
+    {
+      "call_signature": "CDIIS.update(s, d, f, mf, h1e, vhf, f_prev=None); lib.diis.DIIS.update(x, xerr=None)",
+      "description": "CDIIS builds commutator error vectors SDF-FDS, optionally in an orthonormal basis. The low-level DIIS object stores vector/error subspaces in memory or HDF5, builds the DIIS B matrix, solves extrapolation by linear solve or eigenvalue filtering, and supports rollback and restore.",
+      "module_or_file": "pyscf/scf/diis.py, pyscf/lib/diis.py",
+      "name": "DIIS update and extrapolation"
+    },
+    {
+      "call_signature": "ADIIS.update(s, d, f, mf, h1e, vhf, *args, **kwargs); EDIIS.update(s, d, f, mf, h1e, vhf, *args, **kwargs)",
+      "description": "Alternative DIIS-family accelerators. They store recent density and Fock matrices, then use scipy.optimize.minimize on ADIIS/EDIIS objective functions to form extrapolated Fock matrices.",
+      "module_or_file": "pyscf/scf/diis.py",
+      "name": "ADIIS / EDIIS update"
+    },
+    {
+      "call_signature": "get_veff(ks, mol=None, dm=None, dm_last=0, vhf_last=0, hermi=1)",
+      "description": "RKS/UKS Kohn-Sham Veff builder. It initializes grids, evaluates numerical XC and optional NLC terms, builds Coulomb and hybrid exchange contributions, uses incremental direct-SCF J/K when available, and tags Veff with ecoul, exc, vj, and vk.",
+      "module_or_file": "pyscf/dft/rks.py, pyscf/dft/uks.py",
+      "name": "DFT effective-potential path"
+    }
+  ],
+  "immutable_paths": [
+    "**/* outside editable_paths",
+    "tests/**",
+    "test/**",
+    "examples/**",
+    "setup.py",
+    "pyproject.toml",
+    "pyscf/lib/CMakeLists.txt",
+    ".fermilink-optimize/** except .fermilink-optimize/autogen/**"
+  ],
+  "language": "python",
+  "output_quantities": [
+    {
+      "description": "Boolean convergence status stored as mf.converged after mf.kernel(). All representative cases should converge.",
+      "field": "converged",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Final total SCF energy in Hartree, returned by mf.kernel() and stored as mf.e_tot.",
+      "field": "e_tot",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 5e-08
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Final total SCF energy for UKS/open-shell cases, where the goal permits a slightly looser absolute delta.",
+      "field": "e_tot_uks",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1e-07
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Final orbital-gradient norm, computed from mf.get_grad(mf.mo_coeff, mf.mo_occ, mf.get_fock()). The default conv_tol_grad is sqrt(conv_tol) unless explicitly set.",
+      "field": "norm_gorb",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 3.162277660168379e-05
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Molecular orbital energies for occupied orbitals and the lowest 10 virtual orbitals, split by spin for UKS.",
+      "field": "mo_energy_window",
+      "suggested_tolerance": {
+        "mode": "rms_delta",
+        "value": 2e-05
+      },
+      "type": "array"
+    },
+    {
+      "description": "Final one-particle density matrix from mf.make_rdm1(); UKS returns alpha and beta density matrices.",
+      "field": "density_matrix",
+      "suggested_tolerance": {
+        "mode": "rms_delta",
+        "value": 2e-06
+      },
+      "type": "array"
+    },
+    {
+      "description": "Number of SCF iterations stored as mf.cycles. Easy regression cases should not require more than one additional cycle versus baseline.",
+      "field": "scf_cycles",
+      "suggested_tolerance": {
+        "mode": "abs_delta",
+        "value": 1
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "End-to-end wall-clock time for mf.kernel(), the primary performance measurement.",
+      "field": "scf_kernel_seconds",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Optional runner timing around DIIS update/extrapolate calls.",
+      "field": "diis_update_seconds",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Optional runner timing around mf.get_fock calls.",
+      "field": "get_fock_seconds",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    },
+    {
+      "description": "Optional runner timing around generalized eigensolver calls in the SCF loop.",
+      "field": "eig_seconds",
+      "suggested_tolerance": {
+        "mode": "relative_delta",
+        "value": 0.0
+      },
+      "type": "scalar"
+    }
+  ],
+  "package": "pyscf",
+  "runtime_command_template": [
+    "python",
+    "-c",
+    "import json, time, numpy as np; from pyscf import gto, dft; p=json.loads(PARAMS_JSON); mol=gto.M(atom=p['atom'], unit=p.get('unit','Angstrom'), basis=p['basis'], charge=p['charge'], spin=p['spin'], verbose=0); mf=(dft.RKS(mol) if p['method']=='RKS' else dft.UKS(mol)); mf.xc=p['xc']; mf.init_guess=p['init_guess']; mf.grids.level=p['grids_level']; mf.conv_tol=p['conv_tol']; mf.max_cycle=p['max_cycle']; mf.diis_space=p['diis_space']; t=time.perf_counter(); e=mf.kernel(); dt=time.perf_counter()-t; print(json.dumps({'converged': bool(mf.converged), 'e_tot': float(e), 'scf_cycles': int(mf.cycles), 'scf_kernel_seconds': dt}))"
+  ],
+  "suggested_cases": [
+    {
+      "description": "Small closed-shell square H4 RKS hybrid case stressing early-cycle stabilization.",
+      "id": "train-rks-h4-square",
+      "parameters": {
+        "atom": "H 0 0 0; H 1.70 0 0; H 0 1.70 0; H 1.70 1.70 0",
+        "basis": "cc-pVDZ",
+        "charge": 0,
+        "conv_tol": 1e-09,
+        "diis_space": 8,
+        "grids_level": 3,
+        "init_guess": "minao",
+        "max_cycle": 80,
+        "method": "RKS",
+        "spin": 0,
+        "unit": "Angstrom",
+        "xc": "pbe0"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Closed-shell stretched N2 RKS B3LYP case with difficult SCF convergence.",
+      "id": "train-rks-stretched-n2",
+      "parameters": {
+        "atom": "N 0 0 0; N 0 0 2.40",
+        "basis": "def2-SVP",
+        "charge": 0,
+        "conv_tol": 1e-09,
+        "diis_space": 8,
+        "grids_level": 3,
+        "init_guess": "minao",
+        "max_cycle": 80,
+        "method": "RKS",
+        "spin": 0,
+        "unit": "Angstrom",
+        "xc": "b3lyp"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Open-shell bent NO2 radical UKS case covering spin-polarized DFT and GGA hybrid path.",
+      "id": "test-uks-no2-radical",
+      "parameters": {
+        "basis": "6-31g*",
+        "charge": 0,
+        "conv_tol": 1e-09,
+        "diis_space": 8,
+        "geometry_description": "bent NO2, N-O=1.20 Angstrom, O-N-O=134 degrees",
+        "grids_level": 3,
+        "init_guess": "minao",
+        "max_cycle": 80,
+        "method": "UKS",
+        "spin": 1,
+        "unit": "Angstrom",
+        "xc": "b3lyp"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "High-spin transition-metal UKS hybrid case for hard oscillatory convergence.",
+      "id": "test-uks-feo",
+      "parameters": {
+        "atom": "Fe 0 0 0; O 0 0 1.62",
+        "basis": "def2-SVP",
+        "charge": 0,
+        "conv_tol": 1e-08,
+        "diis_space": 10,
+        "grids_level": 3,
+        "init_guess": "atom",
+        "max_cycle": 100,
+        "method": "UKS",
+        "spin": 4,
+        "unit": "Angstrom",
+        "xc": "pbe0"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "Closed-shell H6 regular hexagon RKS hybrid case covering near-degenerate occupied/virtual structure.",
+      "id": "test-rks-h6-ring",
+      "parameters": {
+        "basis": "cc-pVDZ",
+        "charge": 0,
+        "conv_tol": 1e-09,
+        "diis_space": 8,
+        "geometry_description": "H6 regular hexagon, side length 1.45 Angstrom",
+        "grids_level": 3,
+        "init_guess": "minao",
+        "max_cycle": 80,
+        "method": "RKS",
+        "spin": 0,
+        "unit": "Angstrom",
+        "xc": "pbe0"
+      },
+      "weight": 1.0
+    },
+    {
+      "description": "High-spin separated O2 dimer UKS pure-GGA case using atom guess and larger DIIS space.",
+      "id": "test-uks-o2-dimer",
+      "parameters": {
+        "basis": "def2-SVP",
+        "charge": 0,
+        "conv_tol": 1e-08,
+        "diis_space": 10,
+        "geometry_description": "two O2 fragments separated by 3.20 Angstrom, each O-O=1.21 Angstrom",
+        "grids_level": 3,
+        "init_guess": "atom",
+        "max_cycle": 100,
+        "method": "UKS",
+        "spin": 4,
+        "unit": "Angstrom",
+        "xc": "pbe"
+      },
+      "weight": 1.0
+    }
+  ],
+  "threading_model": {
+    "default_threads": 1,
+    "description": "PySCF is Python orchestrating NumPy/SciPy plus C shared libraries built by CMake. Native libraries use BLAS and optional OpenMP; lib.num_threads() controls OpenMP after import. BLAS libraries may also spawn threads. The optimization campaign should pin single-thread execution before importing PySCF.",
+    "env_vars": [
+      "OMP_NUM_THREADS",
+      "MKL_NUM_THREADS",
+      "OPENBLAS_NUM_THREADS",
+      "NUMEXPR_NUM_THREADS"
+    ]
+  }
+}

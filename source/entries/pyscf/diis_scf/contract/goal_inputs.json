@@ -1,0 +1,55 @@
+{
+  "all_files": [],
+  "all_root_rel": ".fermilink-optimize/inputs/all",
+  "case_file_map": {},
+  "files": [],
+  "goal_dir": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf",
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/python-pyscf-diis-scf-goal.md",
+  "goal_sha256": "d736808ae7b3226fdeaa80d48b1c5c0155d26791322ab91999924521a9d6bca7",
+  "missing_references": [
+    {
+      "case_id": "train-rks-h4-square",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    },
+    {
+      "case_id": "train-rks-stretched-n2",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    },
+    {
+      "case_id": "test-uks-no2-radical",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    },
+    {
+      "case_id": "test-uks-feo",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    },
+    {
+      "case_id": "test-rks-benzene-anion-diffuse",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    },
+    {
+      "case_id": "test-rks-h6-ring",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    },
+    {
+      "case_id": "test-rks-stretched-co",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    },
+    {
+      "case_id": "test-uks-o2-dimer",
+      "reference": "grids.level",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf/input_python_pyscf/grids.level"
+    }
+  ],
+  "schema_version": 1,
+  "shared_files": [],
+  "updated_at_utc": "2026-04-26T18:08:25.339613Z",
+  "worker_root_rel": ".fermilink-optimize/inputs/worker"
+}

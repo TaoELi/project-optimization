@@ -1,0 +1,220 @@
+schema_version: 1
+benchmark_id: pyscf-casscf-ciah-mc1step-autogen-v1
+package_id: pyscf
+goal_context:
+  intent_level: guidance
+  target: >-
+    Optimize PySCF CASSCF convergence behavior and end-to-end runtime, focusing
+    on the matrix-free second-order / CIAH solver in pyscf/mcscf/newton_casscf.py
+    and the one-step / two-step macro-micro control flow in pyscf/mcscf/mc1step.py
+    without changing the scientific target.
+  initial_hypothesis: >-
+    Start with numerically safer AH/CIAH preconditioning and step acceptance:
+    stabilize tiny or indefinite diagonal denominators, suppress near-redundant
+    orbital rotations, and reuse valid keyframe/CASCI state to reduce wasted
+    Hessian-vector and macroiteration work.
+repo:
+  editable_paths:
+  - pyscf/mcscf/newton_casscf.py
+  - pyscf/mcscf/newton_casscf_symm.py
+  - pyscf/mcscf/mc1step.py
+  - pyscf/mcscf/mc1step_symm.py
+  - pyscf/mcscf/addons.py
+  - pyscf/mcscf/casci.py
+  - pyscf/soscf/ciah.py
+  - pyscf/lib/linalg_helper.py
+  immutable_paths:
+  - .fermilink-optimize/**
+  - skills/**
+  - pyscf/mcscf/test/**
+  - examples/**
+  - pyscf/lib/**/*.c
+  - pyscf/lib/**/*.h
+  - pyscf/lib/**/*.cc
+  - pyscf/lib/**/*.cpp
+  - pyscf/lib/**/CMakeLists.txt
+  - pyscf/lib/build/**
+campaign:
+  max_iterations: 120
+  stop_on_consecutive_rejections: 30
+worker:
+  max_iterations: 8
+  wait_seconds: 1
+controller:
+  timeout_seconds: 9000
+  warmup_runs: 1
+  measured_runs: 3
+  objective:
+    primary_metric: weighted_median_casscf_kernel_seconds
+    direction: minimize
+    min_relative_improvement: 0.02
+  reject_on:
+  - crash
+  - timeout
+  - missing_metrics
+  - correctness_failure
+correctness:
+  mode: field_tolerances
+  require_all_cases_converged: true
+  field_tolerances:
+  - field: converged
+    label: CASSCF convergence flag
+    type: scalar
+    abs_delta: 0
+  - field: e_tot
+    label: final total CASSCF energy
+    type: scalar
+    abs_delta: 5.0e-08
+  - field: e_cas
+    label: final active-space CASSCF energy
+    type: scalar
+    abs_delta: 5.0e-08
+  - field: e_states
+    label: per-state energies
+    type: array
+    optional: true
+    abs_delta: 5.0e-06
+  - field: norm_gorb
+    label: final orbital-gradient norm
+    type: scalar
+    optional: true
+    abs_delta: 1.0e-04
+  - field: norm_gci
+    label: final CI-gradient norm
+    type: scalar
+    optional: true
+    abs_delta: 1.0e-04
+  - field: root_overlap
+    label: root-overlap diagnostic
+    type: array
+    optional: true
+    abs_delta: 1.0e-06
+runtime:
+  mode: direct
+  command:
+  - /anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/venvs/fermilink-optimize/pyscf-casscf/bin/python
+  - .fermilink-optimize/autogen/benchmark_runner.py
+  - --benchmark
+  - "{benchmark}"
+  - --emit-json
+  env:
+    OMP_NUM_THREADS: "16"
+    OPENBLAS_NUM_THREADS: "1"
+    MKL_NUM_THREADS: "1"
+    NUMEXPR_NUM_THREADS: "1"
+    PYTHONHASHSEED: "0"
+    FERMILINK_GOAL_INPUT_ROOT: /anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf
+  pre_commands:
+  - - bash
+    - -lc
+    - >-
+      set -e;
+      SOURCE_REPO_ROOT="${SOURCE_REPO_ROOT:-$(git rev-parse --show-toplevel)}";
+      VENV="/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/venvs/fermilink-optimize/pyscf-casscf";
+      source "$VENV/bin/activate";
+      { module remove cmake >/dev/null 2>&1 || true; };
+      cd "$SOURCE_REPO_ROOT/pyscf/lib";
+      mkdir -p build;
+      cd build;
+      cmake ..;
+      cmake --build . -j4
+  - - bash
+    - -lc
+    - >-
+      set -e;
+      SOURCE_REPO_ROOT="${SOURCE_REPO_ROOT:-$(git rev-parse --show-toplevel)}";
+      VENV="/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/venvs/fermilink-optimize/pyscf-casscf";
+      source "$VENV/bin/activate";
+      cd "$SOURCE_REPO_ROOT";
+      "$VENV/bin/python" -m pip install -e .
+cases:
+- id: train-newton-benzene-6-31g-cas66-pi-sort
+  weight: 3.0
+  description: >-
+    Goal workload: benzene pi CAS(6,6), symmetry enabled, Newton-CASSCF
+    matrix-free AH/CIAH path.
+  atom: |
+    C -0.65830719  0.61123287 -0.00800148
+    C  0.73685281  0.61123287 -0.00800148
+    C  1.43439081  1.81898387 -0.00800148
+    C  0.73673681  3.02749287 -0.00920048
+    C -0.65808819  3.02741487 -0.00967948
+    C -1.35568919  1.81920887 -0.00868348
+    H -1.20806619 -0.34108413 -0.00755148
+    H  1.28636081 -0.34128013 -0.00668648
+    H  2.53407081  1.81906387 -0.00736748
+    H  1.28693681  3.97963587 -0.00925948
+    H -1.20821019  3.97969587 -0.01063248
+    H -2.45529319  1.81939187 -0.00886348
+  basis: 6-31g
+  charge: 0
+  spin: 0
+  symmetry: true
+  mf_type: RHF
+  mf_conv_tol: 1.0e-10
+  ncas: 6
+  nelecas: 6
+  active_orbital_sort:
+  - 17
+  - 20
+  - 21
+  - 22
+  - 23
+  - 30
+  solver_family: newton
+  conv_tol: 1.0e-07
+  conv_tol_grad: null
+  max_cycle_macro: 50
+  max_cycle_micro: 10
+  max_stepsize: 0.03
+  ah_level_shift: 1.0e-08
+  ah_conv_tol: 1.0e-12
+  ah_lindep: 1.0e-14
+  ah_start_tol: 500.0
+  ah_start_cycle: 3
+  ah_max_cycle: 30
+- id: test-newton-benzene-ccpvtz-cas66-pi-sort
+  weight: 3.0
+  description: >-
+    Goal test workload: same benzene pi CAS(6,6), symmetry enabled, Newton-CASSCF
+    path with a larger cc-pVTZ AO/virtual space.
+  atom: |
+    C -0.65830719  0.61123287 -0.00800148
+    C  0.73685281  0.61123287 -0.00800148
+    C  1.43439081  1.81898387 -0.00800148
+    C  0.73673681  3.02749287 -0.00920048
+    C -0.65808819  3.02741487 -0.00967948
+    C -1.35568919  1.81920887 -0.00868348
+    H -1.20806619 -0.34108413 -0.00755148
+    H  1.28636081 -0.34128013 -0.00668648
+    H  2.53407081  1.81906387 -0.00736748
+    H  1.28693681  3.97963587 -0.00925948
+    H -1.20821019  3.97969587 -0.01063248
+    H -2.45529319  1.81939187 -0.00886348
+  basis: ccpvtz
+  charge: 0
+  spin: 0
+  symmetry: true
+  mf_type: RHF
+  mf_conv_tol: 1.0e-10
+  ncas: 6
+  nelecas: 6
+  active_orbital_sort:
+  - 17
+  - 20
+  - 21
+  - 22
+  - 23
+  - 30
+  solver_family: newton
+  conv_tol: 1.0e-07
+  conv_tol_grad: null
+  max_cycle_macro: 50
+  max_cycle_micro: 10
+  max_stepsize: 0.03
+  ah_level_shift: 1.0e-08
+  ah_conv_tol: 1.0e-12
+  ah_lindep: 1.0e-14
+  ah_start_tol: 500.0
+  ah_start_cycle: 3
+  ah_max_cycle: 30

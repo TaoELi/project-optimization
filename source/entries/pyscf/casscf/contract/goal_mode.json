@@ -1,0 +1,27 @@
+{
+  "analysis_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf/.fermilink-optimize/autogen/goal_analysis.json",
+  "benchmark_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf/.fermilink-optimize/autogen/benchmark.yaml",
+  "created_at_utc": "2026-04-26T20:36:31.384312Z",
+  "created_files": {
+    "analysis": true,
+    "benchmark": true,
+    "goal_markdown": true,
+    "run_script": true,
+    "runner": true,
+    "setup": true,
+    "submit_launcher": true
+  },
+  "goal_copy_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf/.fermilink-optimize/autogen/goal.md",
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/python-pyscf-casscf-goal.md",
+  "goal_sha256": "9df1d809f6caede34201825f92b135f7b52dc6701828d2fe238e4c119af6d93b",
+  "language": "python",
+  "mode": "goal",
+  "package_id": "pyscf",
+  "project_root": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf",
+  "review_notes": "The runtime command is a template with placeholders, not a directly runnable command. For state-averaged root identity, the current source/tests mostly compare energies and CI dot products; the campaign runner should add explicit overlap-based matching diagnostics for crowded or degenerate cases.\nWrote both requested files under .fermilink-optimize/autogen. YAML parsing and runner py_compile passed with the pinned virtualenv interpreter. The full PySCF benchmark cases were not executed here; verify baseline convergence and runtime on the target node before starting the optimization campaign.",
+  "run_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf/.fermilink-optimize/autogen/run_optimize.sh",
+  "runner_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf/.fermilink-optimize/autogen/benchmark_runner.py",
+  "schema_version": 1,
+  "setup_script_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf/.fermilink-optimize/autogen/setup_env.sh",
+  "submit_launcher_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/pyscf-casscf/.fermilink-optimize/autogen/submit_poll_launcher.py"
+}

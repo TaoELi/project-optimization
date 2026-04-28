@@ -1,0 +1,47 @@
+{
+  "metric_label": "Weighted median SCF kernel time (s)",
+  "direction": "lower",
+  "iterations_total": 28,
+  "accepted": [
+    "3fc6d11adee9",
+    "a5198fab0782",
+    "89eac5279c1a",
+    "14eae176b837",
+    "8d8a60d41b1b"
+  ],
+  "rejected": [
+    "fe174d17db12",
+    "cc9080893ef4",
+    "d5d6fd79c2d9",
+    "4115f7500839",
+    "823bbe5bec61",
+    "cee4ed30a38d",
+    "9ceb1992d98c",
+    "de439af669fb",
+    "b24465bd95e3",
+    "15e0e3d707cc",
+    "60729b5492d4",
+    "ae6b140db86a",
+    "7c0d081c5cac",
+    "6508de525961",
+    "05050f2446e1",
+    "1b92d9748ab0",
+    "3236d2301379",
+    "e3c52bd40935",
+    "c0d0df07a312",
+    "64a35b457b66"
+  ],
+  "correctness_failure": [
+    "61af054e3309",
+    "15371b3f64b0"
+  ],
+  "baseline": {
+    "commit": "44c83aaae41f",
+    "metric": 1.22637232198
+  },
+  "best": {
+    "commit": "8d8a60d41b1b",
+    "metric": 0.812246244983,
+    "pct_vs_baseline": 33.76838090477988
+  }
+}

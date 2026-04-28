@@ -1,0 +1,126 @@
+Iteration 0015 — 14eae176b837 (accepted)
+========================================
+
+
+GitHub commit: `14eae176b837 <iter-0015-page-head-14eae176b837_>`_
+Published branch: `fermilink-optimize/pyscf-diis_scf <https://github.com/skilled-scipkg/pyscf/tree/fermilink-optimize%2Fpyscf-diis_scf>`_
+
+Change summary
+--------------
+
+
+Build primary molecular RKS/UKS numerical-integration grids without the initial atom-group sorting step, retaining existing pruning, non0tab generation, and per-object AO block-cache semantics while avoiding grid-sorting startup overhead.
+
+Acceptance rationale
+--------------------
+
+
+Correctness passed and the 3.60% incumbent improvement clears the 2% threshold without persistent caching or answer replay.
+
+Guardrails & metrics
+--------------------
+
+
++------------------+--------------------------------------------------------------------------------------------+
+| field            | value                                                                                      |
++==================+============================================================================================+
+| decision         | ACCEPTED                                                                                   |
++------------------+--------------------------------------------------------------------------------------------+
+| correctness      | ok                                                                                         |
++------------------+--------------------------------------------------------------------------------------------+
+| correctness mode | field_tolerances                                                                           |
++------------------+--------------------------------------------------------------------------------------------+
+| hard reject      | no                                                                                         |
++------------------+--------------------------------------------------------------------------------------------+
+| guardrail errors | 0                                                                                          |
++------------------+--------------------------------------------------------------------------------------------+
+| incumbent commit | `89eac5279c1a <iter-0015-guardrails-incumbent-89eac5279c1aaa4cbf77e1e7fe59e268c3f1f23e_>`_ |
++------------------+--------------------------------------------------------------------------------------------+
+| candidate commit | `14eae176b837 <iter-0015-guardrails-candidate-14eae176b8371c2ae8c472a007d7fa357f75c9c1_>`_ |
++------------------+--------------------------------------------------------------------------------------------+
+| incumbent metric | 0.860287                                                                                   |
++------------------+--------------------------------------------------------------------------------------------+
+| candidate metric | 0.82932                                                                                    |
++------------------+--------------------------------------------------------------------------------------------+
+| baseline metric  | 1.22637                                                                                    |
++------------------+--------------------------------------------------------------------------------------------+
+| Δ vs incumbent   | +3.600% (lower-is-better sign)                                                             |
++------------------+--------------------------------------------------------------------------------------------+
+| changed files    | pyscf/dft/rks.py                                                                           |
++------------------+--------------------------------------------------------------------------------------------+
+
+
+Diffstat
+--------
+
+
+.. code-block:: text
+
+    pyscf/dft/rks.py | 21 ++++++++++++++-------
+    1 file changed, 14 insertions(+), 7 deletions(-)
+
+Diff
+----
+
+
+:download:`download full diff <_diffs/iter_0015_14eae176b837.diff>`
+
+.. code-block:: diff
+
+   diff --git a/pyscf/dft/rks.py b/pyscf/dft/rks.py
+   index 349f813ec..17e8006d4 100644
+   --- a/pyscf/dft/rks.py
+   +++ b/pyscf/dft/rks.py
+   @@ -36,6 +36,17 @@ from pyscf import __config__
+    
+    _AO_CACHE_MAX_MEMORY = getattr(__config__, 'dft_rks_ao_cache_max_memory', 512)
+    
+   +def _ao_cache_size_mb(mol, grids, deriv):
+   +    ngrids = grids.coords.shape[0]
+   +    comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
+   +    return comp * ngrids * mol.nao * numpy.dtype('float64').itemsize / 1e6
+   +
+   +def _ao_cache_key(mol, grids, nao, deriv, blksize):
+   +    non0tab_key = getattr(grids, 'non0tab', None)
+   +    return (id(mol), id(grids), grids.coords.ctypes.data,
+   +            grids.weights.ctypes.data, None if non0tab_key is None else id(non0tab_key),
+   +            grids.coords.shape, grids.weights.shape, nao, deriv, blksize)
+   +
+    def _cached_numint_call(ks, ni, mol, grids, max_memory, fn):
+        coords = getattr(grids, 'coords', None)
+        weights = getattr(grids, 'weights', None)
+   @@ -58,18 +69,14 @@ def _cached_numint_call(ks, ni, mol, grids, max_memory, fn):
+            if nao is None:
+                nao = mol1.nao
+            ngrids = grids1.coords.shape[0]
+   -        comp = (deriv + 1) * (deriv + 2) * (deriv + 3) // 6
+   -        cache_mb = comp * ngrids * nao * numpy.dtype('float64').itemsize / 1e6
+   +        cache_mb = _ao_cache_size_mb(mol1, grids1, deriv)
+            max_cache_mb = min(_AO_CACHE_MAX_MEMORY, max_memory * .25)
+            if cache_mb > max_cache_mb:
+                yield from block_loop(mol1, grids1, nao, deriv, max_memory,
+                                      non0tab, blksize, buf)
+                return
+    
+   -        non0tab_key = getattr(grids1, 'non0tab', None)
+   -        key = (id(mol1), id(grids1), grids1.coords.ctypes.data,
+   -               grids1.weights.ctypes.data, None if non0tab_key is None else id(non0tab_key),
+   -               grids1.coords.shape, grids1.weights.shape, nao, deriv, blksize)
+   +        key = _ao_cache_key(mol1, grids1, nao, deriv, blksize)
+            blocks = ao_cache.get(key)
+            if blocks is None:
+                blocks = []
+   @@ -561,7 +568,7 @@ class KohnShamDFT:
+            ground_state = getattr(dm, 'ndim', 0) == 2
+            if self.grids.coords is None:
+                t0 = (logger.process_clock(), logger.perf_counter())
+   -            self.grids.build(with_non0tab=True)
+   +            self.grids.build(with_non0tab=True, sort_grids=False)
+                if self.small_rho_cutoff > 1e-20 and ground_state:
+                    # Filter grids the first time setup grids
+                    self.grids = prune_small_rho_grids_(self, self.mol, dm,
+
+
+.. _iter-0015-page-head-14eae176b837: https://github.com/skilled-scipkg/pyscf/commit/14eae176b837
+.. _iter-0015-guardrails-incumbent-89eac5279c1aaa4cbf77e1e7fe59e268c3f1f23e: https://github.com/skilled-scipkg/pyscf/commit/89eac5279c1aaa4cbf77e1e7fe59e268c3f1f23e
+.. _iter-0015-guardrails-candidate-14eae176b8371c2ae8c472a007d7fa357f75c9c1: https://github.com/skilled-scipkg/pyscf/commit/14eae176b8371c2ae8c472a007d7fa357f75c9c1

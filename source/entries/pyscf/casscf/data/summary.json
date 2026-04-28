@@ -1,0 +1,41 @@
+{
+  "metric_label": "Weighted median casscf kernel time (s)",
+  "direction": "lower",
+  "iterations_total": 22,
+  "accepted": [
+    "2eb53381cda9",
+    "7193e2b76d2b",
+    "334a40a0e17c",
+    "911063b081d2"
+  ],
+  "rejected": [
+    "fdc4b31c84b8",
+    "77d0fdfe785d",
+    "f6b960fe047c",
+    "c08bd5458630",
+    "a3ed2ebcaf36",
+    "db1c93a03725",
+    "7ed98d8c2d85",
+    "a60cd89bb8c2",
+    "188c01d21e99",
+    "e06fb6d6e54d",
+    "dd9e49defdfb",
+    "ccb1454453cd",
+    "3d3efe61c91f",
+    "f4c984052a2a",
+    "0e6acc89cdae",
+    "b7da83d5ec68"
+  ],
+  "correctness_failure": [
+    "0e0c3c0191da"
+  ],
+  "baseline": {
+    "commit": "44c83aaae41f",
+    "metric": 102.443765592
+  },
+  "best": {
+    "commit": "911063b081d2",
+    "metric": 39.745700547,
+    "pct_vs_baseline": 61.20242133104116
+  }
+}

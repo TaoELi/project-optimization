@@ -1,0 +1,39 @@
+diff --git a/pyscf/scf/hf.py b/pyscf/scf/hf.py
+index af1e95e61..d5d18d94d 100644
+--- a/pyscf/scf/hf.py
++++ b/pyscf/scf/hf.py
+@@ -214,15 +214,27 @@ Keyword argument "init_dm" is replaced by "dm0"''')
+         mo_energy, mo_coeff = mf.eig(fock, s1e)
+         mo_occ = mf.get_occ(mo_energy, mo_coeff)
+         dm, dm_last = mf.make_rdm1(mo_coeff, mo_occ), dm
+-        vhf = mf.get_veff(mol, dm, dm_last, vhf)
+-        e_tot, last_hf_e = mf.energy_tot(dm, h1e, vhf), e_tot
+-
+-        fock = mf.get_fock(h1e, s1e, vhf, dm)
+-        norm_gorb = numpy.linalg.norm(mf.get_grad(mo_coeff, mo_occ, fock))
+-        if not TIGHT_GRAD_CONV_TOL:
+-            norm_gorb = norm_gorb / numpy.sqrt(norm_gorb.size)
+         norm_ddm = numpy.linalg.norm(dm-dm_last)
+ 
++        # If canonicalization barely changes the density from an already small
++        # gradient, the refreshed potential is numerically redundant.
++        skip_extra_veff = (not callable(mf.check_convergence) and
++                           norm_ddm < conv_tol_grad * .3 and
++                           norm_gorb < conv_tol_grad * .2)
++        if skip_extra_veff:
++            last_hf_e = e_tot
++            norm_gorb = numpy.linalg.norm(mf.get_grad(mo_coeff, mo_occ, fock))
++            if not TIGHT_GRAD_CONV_TOL:
++                norm_gorb = norm_gorb / numpy.sqrt(norm_gorb.size)
++        else:
++            vhf = mf.get_veff(mol, dm, dm_last, vhf)
++            e_tot, last_hf_e = mf.energy_tot(dm, h1e, vhf), e_tot
++
++            fock = mf.get_fock(h1e, s1e, vhf, dm)
++            norm_gorb = numpy.linalg.norm(mf.get_grad(mo_coeff, mo_occ, fock))
++            if not TIGHT_GRAD_CONV_TOL:
++                norm_gorb = norm_gorb / numpy.sqrt(norm_gorb.size)
++
+         conv_tol = conv_tol * 10
+         conv_tol_grad = conv_tol_grad * 3
+         if callable(mf.check_convergence):

@@ -1,0 +1,40 @@
+diff --git a/pyscf/mcscf/newton_casscf.py b/pyscf/mcscf/newton_casscf.py
+index 70458d2bf..ad8a3eef7 100644
+--- a/pyscf/mcscf/newton_casscf.py
++++ b/pyscf/mcscf/newton_casscf.py
+@@ -442,6 +442,24 @@ def _df_jk_from_low_rank_dm(with_df, factor_pairs):
+     return vj, vk
+ 
+ 
++def _materialize_eris_ppaa_papa(eris, max_memory):
++    ppaa = eris.ppaa
++    papa = eris.papa
++    if isinstance(ppaa, numpy.ndarray) and isinstance(papa, numpy.ndarray):
++        return eris
++
++    try:
++        size_mb = (ppaa.size * ppaa.dtype.itemsize +
++                   papa.size * papa.dtype.itemsize) / 1e6
++    except AttributeError:
++        return eris
++
++    if lib.current_memory()[0] + size_mb < max_memory * .9:
++        eris.ppaa = numpy.asarray(ppaa, order='C')
++        eris.papa = numpy.asarray(papa, order='C')
++    return eris
++
++
+ def update_orb_ci(casscf, mo, ci0, eris, x0_guess=None,
+                   conv_tol_grad=1e-4, max_stepsize=None, verbose=None):
+     log = logger.new_logger(casscf, verbose)
+@@ -846,6 +864,10 @@ class CASSCF(mc1step.CASSCF):
+     def kernel(self, mo_coeff=None, ci0=None, callback=None):
+         return mc1step.CASSCF.kernel(self, mo_coeff, ci0, callback, kernel)
+ 
++    def ao2mo(self, mo_coeff=None):
++        eris = mc1step.CASSCF.ao2mo(self, mo_coeff)
++        return _materialize_eris_ppaa_papa(eris, self.max_memory)
++
+     def casci(self, mo_coeff, ci0=None, eris=None, verbose=None, envs=None):
+         log = logger.new_logger(self, verbose)
+         fcasci = mc1step._fake_h_for_fast_casci(self, mo_coeff, eris)

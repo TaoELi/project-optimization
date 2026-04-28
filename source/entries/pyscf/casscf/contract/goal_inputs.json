@@ -1,0 +1,75 @@
+{
+  "all_files": [],
+  "all_root_rel": ".fermilink-optimize/inputs/all",
+  "case_file_map": {},
+  "files": [],
+  "goal_dir": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf",
+  "goal_path": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/python-pyscf-casscf-goal.md",
+  "goal_sha256": "9df1d809f6caede34201825f92b135f7b52dc6701828d2fe238e4c119af6d93b",
+  "missing_references": [
+    {
+      "case_id": "train-newton-benzene-6-31g-cas66-pi-sort",
+      "reference": "examples/mcscf/17-approx_orbital_hessian.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/examples/mcscf/17-approx_orbital_hessian.py"
+    },
+    {
+      "case_id": "train-newton-benzene-6-31g-cas66-pi-sort",
+      "reference": "mc.newton",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/mc.newton"
+    },
+    {
+      "case_id": "train-newton-benzene-6-31g-cas66-pi-sort",
+      "reference": "mcscf.approx_hessian",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/mcscf.approx_hessian"
+    },
+    {
+      "case_id": "train-newton-benzene-6-31g-cas66-pi-sort",
+      "reference": "mcscf.CASSCF",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/mcscf.CASSCF"
+    },
+    {
+      "case_id": "train-newton-benzene-6-31g-cas66-pi-sort",
+      "reference": "AO/virtual",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/AO/virtual"
+    },
+    {
+      "case_id": "train-newton-benzene-6-31g-cas66-pi-sort",
+      "reference": "AH/preconditioner",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/AH/preconditioner"
+    },
+    {
+      "case_id": "test-newton-benzene-ccpvtz-cas66-pi-sort",
+      "reference": "examples/mcscf/17-approx_orbital_hessian.py",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/examples/mcscf/17-approx_orbital_hessian.py"
+    },
+    {
+      "case_id": "test-newton-benzene-ccpvtz-cas66-pi-sort",
+      "reference": "mc.newton",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/mc.newton"
+    },
+    {
+      "case_id": "test-newton-benzene-ccpvtz-cas66-pi-sort",
+      "reference": "mcscf.approx_hessian",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/mcscf.approx_hessian"
+    },
+    {
+      "case_id": "test-newton-benzene-ccpvtz-cas66-pi-sort",
+      "reference": "mcscf.CASSCF",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/mcscf.CASSCF"
+    },
+    {
+      "case_id": "test-newton-benzene-ccpvtz-cas66-pi-sort",
+      "reference": "AO/virtual",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/AO/virtual"
+    },
+    {
+      "case_id": "test-newton-benzene-ccpvtz-cas66-pi-sort",
+      "reference": "AH/preconditioner",
+      "resolved_source": "/anvil/scratch/x-tli22/fermilink_optimize/project_pyscf_casscf/input_python_pyscf/AH/preconditioner"
+    }
+  ],
+  "schema_version": 1,
+  "shared_files": [],
+  "updated_at_utc": "2026-04-26T18:52:39.764871Z",
+  "worker_root_rel": ".fermilink-optimize/inputs/worker"
+}
