@@ -66,6 +66,7 @@ exclude_patterns = [
 ]
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+html_js_files = ["js/theme-light-only.js"]
 
 html_meta = {"referrer": "strict-origin-when-cross-origin"}
 
